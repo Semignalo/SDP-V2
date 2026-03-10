@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Outfit', sans-serif;
+  --font-serif: 'Playfair Display', serif;
+
+  --color-primary: #1A1A1A;
+  --color-primary-foreground: #FFFFFF;
+
+  /* Soft Gold Accent Palette */
+  --color-accent: #C5A059;
+  /* Soft Gold / Champagne */
+  --color-accent-light: #E5D1A3;
+  --color-accent-dark: #997B3D;
+  --color-accent-foreground: #FFFFFF;
+
+  --color-sale: #E53E3E;
+
+  --color-muted: #F9FAFB;
+  --color-muted-foreground: #6B7280;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .font-serif {
+    font-family: var(--font-serif);
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
