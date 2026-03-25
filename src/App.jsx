@@ -13,6 +13,10 @@ import TrackOrders from './pages/TrackOrders';
 import Catalog from './pages/Catalog';
 import AdminOrders from './pages/admin/Orders';
 import AdminPaymentSettings from './pages/admin/PaymentSettings';
+import AdminUsers from './pages/admin/Users';
+import Login from './pages/Login';
+import Profile from './pages/Profile';
+import CenterShop from './pages/CenterShop';
 
 function App() {
   return (
@@ -26,7 +30,9 @@ function App() {
         <Route path="/invoice/:id" element={<Invoice />} />
         <Route path="/orders" element={<TrackOrders />} />
         <Route path="/about" element={<div className="p-20 text-center">About Page Coming Soon</div>} />
-        <Route path="/login" element={<div className="p-20 text-center">Login Page Coming Soon</div>} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/center" element={<CenterShop />} />
       </Route>
 
       {/* Admin Routes */}
@@ -37,7 +43,7 @@ function App() {
 
         <Route path="orders" element={<AdminOrders />} />
         <Route path="products" element={<AdminProducts />} />
-        <Route path="users" element={<div className="p-8">Users Page</div>} />
+        <Route path="users" element={<AdminUsers />} />
       </Route>
     </Routes>
   );

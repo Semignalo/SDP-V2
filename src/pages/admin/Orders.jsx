@@ -31,6 +31,47 @@ export default function Orders() {
     const handleUpdateStatus = async (orderId, newStatus) => {
         try {
             const orderRef = doc(db, "orders", orderId);
+            const targetOrder = orders.find(o => o.id === orderId);
+            const oldStatus = targetOrder.status;
+
+            if (oldStatus !== newStatus) {
+                // Determine transaction value
+                const productSpend = (targetOrder.total || 0) - (targetOrder.shipping || 0);
+                
+                // If it's linked to a user account, update their cumulatives!
+                if (targetOrder.userId) {
+                    const { getDoc } = await import('firebase/firestore');
+                    const { getEligibleTier } = await import('../../lib/tierUtils');
+                    const userRef = doc(db, "users", targetOrder.userId);
+                    const userSnap = await getDoc(userRef);
+
+                    if (userSnap.exists()) {
+                        let userData = userSnap.data();
+                        let newCumulative = userData.cumulativeSpending || 0;
+
+                        if (newStatus === 'Selesai' && oldStatus !== 'Selesai') {
+                            // Add to cumulative
+                            newCumulative += productSpend;
+                        } else if (oldStatus === 'Selesai' && newStatus !== 'Selesai') {
+                            // Substract from cumulative (Refund logic)
+                            newCumulative = Math.max(0, newCumulative - productSpend);
+                        }
+
+                        // Re-evaluate tier
+                        let newTier = userData.tier;
+                        if (userData.role !== 'starcenter' && userData.role !== 'admin') {
+                            newTier = getEligibleTier(newCumulative);
+                        }
+
+                        // Save new user data
+                        await updateDoc(userRef, {
+                            cumulativeSpending: newCumulative,
+                            tier: newTier
+                        });
+                    }
+                }
+            }
+
             await updateDoc(orderRef, { status: newStatus });
 
             // Update local state

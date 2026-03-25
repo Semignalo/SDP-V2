@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { CheckCircle, Copy, AlertCircle } from 'lucide-react';
+import { CheckCircle, Copy, AlertCircle, Printer } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 export default function Invoice() {
     const { id } = useParams();
+    const [searchParams] = useSearchParams();
+    const isPrintMode = searchParams.get('print') === 'true';
+    
     const [order, setOrder] = useState(null);
     const [paymentConfig, setPaymentConfig] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -46,6 +49,14 @@ export default function Invoice() {
         }
     }, [id]);
 
+    useEffect(() => {
+        if (!loading && order && isPrintMode) {
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
+    }, [loading, order, isPrintMode]);
+
     const handleCopy = (text) => {
         navigator.clipboard.writeText(text);
         Swal.fire({
@@ -57,6 +68,10 @@ export default function Invoice() {
             showConfirmButton: false,
             timer: 1500
         });
+    };
+
+    const handlePrint = () => {
+        window.print();
     };
 
     if (loading) {
@@ -145,7 +160,13 @@ export default function Invoice() {
                         </div>
                     </div>
 
-                    <div className="text-center pt-4">
+                    <div className="text-center pt-4 flex flex-col md:flex-row justify-center items-center gap-4 print:hidden">
+                        <button 
+                            onClick={handlePrint}
+                            className="flex items-center gap-2 bg-gray-900 text-white px-6 py-2.5 rounded-lg hover:bg-gray-800 transition"
+                        >
+                            <Printer size={18} /> Cetak / Download Invoice
+                        </button>
                         <Link to="/" className="text-sm text-gray-500 underline hover:text-gray-900">
                             Kembali ke Halaman Utama
                         </Link>
@@ -153,6 +174,13 @@ export default function Invoice() {
 
                 </div>
             </div>
+            
+            {/* Global style to hide the print button locally */}
+            <style>{`
+                @media print {
+                    .print\\:hidden { display: none !important; }
+                }
+            `}</style>
         </div>
     );
 }

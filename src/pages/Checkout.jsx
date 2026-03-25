@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
+import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { TIER_CONFIG } from '../lib/tierUtils';
 import Swal from 'sweetalert2';
 
 export default function Checkout() {
     const { cart, getCartTotal, clearCart } = useCart();
+    const { currentUser, userData } = useAuth();
     const navigate = useNavigate();
 
     const [loading, setLoading] = useState(false);
@@ -18,9 +21,29 @@ export default function Checkout() {
         postalCode: ''
     });
 
+    // Initialize form with UserData if logged in
+    useEffect(() => {
+        if (userData) {
+            setFormData(prev => ({
+                ...prev,
+                name: userData.name || prev.name,
+                phone: userData.phone || prev.phone,
+                address: userData.address || prev.address,
+                city: userData.city || prev.city,
+                postalCode: userData.postalCode || prev.postalCode
+            }));
+        }
+    }, [userData]);
+
     const subtotal = getCartTotal();
+    
+    // Tier Discount Logic
+    const tierData = TIER_CONFIG[userData?.tier] || TIER_CONFIG['bronze'];
+    const discountPercentage = userData ? tierData.discount : 0;
+    const discountAmount = (subtotal * discountPercentage) / 100;
+    
     const shipping = 20000;
-    const total = subtotal + shipping;
+    const total = subtotal - discountAmount + shipping;
 
     if (cart.length === 0) {
         return (
@@ -43,20 +66,51 @@ export default function Checkout() {
 
     const handleCheckout = async (e) => {
         e.preventDefault();
+
+        // Starcenter Batch check
+        if (userData?.role === 'starcenter' && total < 5000000) {
+            Swal.fire({
+                title: 'Minimum Belanja Belum Tercapai',
+                text: 'Sebagai akun Starcenter (Official Distributor), minimum transaksi adalah Rp 5.000.000.',
+                icon: 'warning',
+                confirmButtonColor: '#111827'
+            });
+            return;
+        }
+
         setLoading(true);
 
         try {
-            const orderData = {
+            // Sanitize order data to remove undefined values (Firebase rejects undefined deeply nested in arrays)
+            const rawOrderData = {
                 customer: formData,
+                userId: currentUser?.uid || null,
                 items: cart,
                 subtotal,
+                discountPercentage,
+                discountAmount,
                 shipping,
                 total,
-                status: 'Menunggu Pembayaran',
+                status: 'Menunggu Pembayaran'
+            };
+            
+            // JSON stringify trick strips out undefined keys completely
+            const sanitizedOrderData = JSON.parse(JSON.stringify(rawOrderData));
+            
+            const orderData = {
+                ...sanitizedOrderData,
                 createdAt: serverTimestamp()
             };
 
             const docRef = await addDoc(collection(db, "orders"), orderData);
+
+            // Update Last Transaction Date limit for downgrades (reset timer 30 hari)
+            if (currentUser) {
+                const userRef = doc(db, "users", currentUser.uid);
+                await updateDoc(userRef, {
+                    lastTransactionDate: serverTimestamp()
+                });
+            }
 
             // Save to localStorage for tracking without login
             const myOrders = JSON.parse(localStorage.getItem('my_orders') || '[]');
@@ -80,7 +134,7 @@ export default function Checkout() {
             console.error("Error creating order:", error);
             Swal.fire({
                 title: 'Gagal!',
-                text: 'Terjadi kesalahan saat memproses pesanan Anda.',
+                text: 'Terjadi kesalahan: ' + (error.message || error),
                 icon: 'error',
                 confirmButtonColor: '#111827'
             });
@@ -201,6 +255,12 @@ export default function Checkout() {
                             <span>Subtotal</span>
                             <span>Rp. {subtotal.toLocaleString('id-ID')}</span>
                         </div>
+                        {discountAmount > 0 && (
+                            <div className="flex justify-between text-sm text-[var(--color-primary)] font-medium">
+                                <span>Tier Discount ({discountPercentage}%)</span>
+                                <span>- Rp. {discountAmount.toLocaleString('id-ID')}</span>
+                            </div>
+                        )}
                         <div className="flex justify-between text-sm text-gray-600">
                             <span>Shipping (Flat Rate)</span>
                             <span>Rp. {shipping.toLocaleString('id-ID')}</span>
