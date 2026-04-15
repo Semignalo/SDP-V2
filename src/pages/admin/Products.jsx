@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db, storage } from '../../lib/firebase';
-import { collection, getDocs, addDoc, deleteDoc, doc, query, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { adminProductApi, productApi } from '../../api/productApi';
 import { Plus, Trash2, Edit2, X, LayoutGrid, List, Upload, Loader2, GripHorizontal } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -29,10 +27,6 @@ export default function Products() {
         isPromo: false // Promo flag
     });
 
-    // ... (fetchProducts, handleInputChange, etc. - keep existing logic)
-
-    const productsCollectionRef = collection(db, "products");
-
     useEffect(() => {
         fetchProducts();
     }, []);
@@ -40,9 +34,8 @@ export default function Products() {
     const fetchProducts = async () => {
         try {
             setLoading(true);
-            const q = query(productsCollectionRef);
-            const data = await getDocs(q);
-            setProducts(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+            const data = await productApi.getProducts();
+            setProducts(data.data || data);
         } catch (error) {
             console.error("Error fetching products:", error);
         } finally {
@@ -77,100 +70,48 @@ export default function Products() {
         setIsEditing(true);
         setEditId(product.id);
         const initialMedia = product.media && product.media.length > 0
-            ? product.media
-            : (product.image && product.image !== 'https://images.unsplash.com/photo-1629198688000-71f23e745b6e?auto=format&fit=crop&q=80&w=800' ? [product.image] : []);
+            ? product.media.map(m => m.file_path ? `/storage/${m.file_path}` : m.url)
+            : (product.main_image || product.image && product.image !== 'https://images.unsplash.com/photo-1629198688000-71f23e745b6e?auto=format&fit=crop&q=80&w=800' ? [product.main_image || product.image] : []);
 
         setFormData({
             title: product.title || '',
-            price: product.price || '',
-            originalPrice: product.originalPrice || '',
-            discount: product.discount || '',
+            price: product.price ? parseFloat(product.price).toString() : '',
+            originalPrice: product.original_price || product.originalPrice ? parseFloat(product.original_price || product.originalPrice).toString() : '',
+            discount: product.discount_label || product.discount || '',
             category: product.category || 'The Act',
             description: product.description || '',
-            image: product.image || '',
+            image: product.main_image || product.image || '',
             media: initialMedia,
-            variants: product.variants || [],
-            isPromo: product.isPromo || false
+            variants: product.variants ? product.variants.map(v => ({ name: v.name, price: v.price })) : [],
+            isPromo: product.is_promo || product.isPromo || false
         });
         setIsModalOpen(true);
     };
 
-    const handleImageUpload = async (e) => {
+    const [filesToUpload, setFilesToUpload] = useState([]);
+
+    const handleImageUpload = (e) => {
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
+        
+        // Save files to state so we upload them when submitting
+        setFilesToUpload(prev => [...prev, ...files]);
+        
+        // Show local preview URLs immediately
+        const previewUrls = files.map(file => URL.createObjectURL(file));
+        
+        setFormData(prev => {
+            const newMedia = [...prev.media, ...previewUrls];
+            const newImage = (prev.image === 'https://images.unsplash.com/photo-1629198688000-71f23e745b6e?auto=format&fit=crop&q=80&w=800' || !prev.image) && newMedia.length > 0
+                ? newMedia[0]
+                : prev.image;
 
-        setIsUploading(true);
-        setUploadProgress(0);
-
-        try {
-            const uploadPromises = files.map(file => {
-                const storageRef = ref(storage, `products/${Date.now()}_${file.name}`);
-                const uploadTask = uploadBytesResumable(storageRef, file);
-
-                return new Promise((resolve, reject) => {
-                    uploadTask.on('state_changed',
-                        (snapshot) => {
-                            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                            // Update progress only for current file - tricky with multiple, 
-                            // so maybe just stick to a global loading spinner for simplicity in this version?
-                            // Or calculate total? For now, let's keep it simple: progress shows last file or average.
-                            setUploadProgress(prev => (prev + progress) / 2);
-                        },
-                        (error) => {
-                            console.error("Upload failed:", error);
-                            if (error.code === 'storage/unauthorized') {
-                                Swal.fire({
-                                    title: 'Akses Ditolak!',
-                                    text: 'Upload gagal. Pastikan rules Firebase Storage mengizinkan write.',
-                                    icon: 'error',
-                                    confirmButtonColor: '#111827'
-                                });
-                            }
-                            reject(error);
-                        },
-                        async () => {
-                            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                            resolve(downloadURL);
-                        }
-                    );
-                });
-            });
-
-            const uploadedUrls = await Promise.all(uploadPromises);
-
-            setFormData(prev => {
-                const newMedia = [...prev.media, ...uploadedUrls];
-                // If main image is default or empty, set the first uploaded media as main image
-                const newImage = (prev.image === 'https://images.unsplash.com/photo-1629198688000-71f23e745b6e?auto=format&fit=crop&q=80&w=800' || !prev.image) && newMedia.length > 0
-                    ? newMedia[0]
-                    : prev.image;
-
-                return {
-                    ...prev,
-                    media: newMedia,
-                    image: newImage
-                };
-            });
-
-            Swal.fire({
-                title: 'Berhasil Upload!',
-                text: `${uploadedUrls.length} file berhasil diunggah.`,
-                icon: 'success',
-                confirmButtonColor: '#111827'
-            });
-
-        } catch (error) {
-            console.error("One or more uploads failed:", error);
-            Swal.fire({
-                title: 'Upload Gagal!',
-                text: 'Beberapa file gagal diunggah.',
-                icon: 'error',
-                confirmButtonColor: '#111827'
-            });
-        } finally {
-            setIsUploading(false);
-            setUploadProgress(0);
-        }
+            return {
+                ...prev,
+                media: newMedia,
+                image: newImage
+            };
+        });
     };
 
     const removeMedia = (index) => {
@@ -243,44 +184,54 @@ export default function Products() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
+            setIsUploading(true);
+            const apiData = {
+                title: formData.title,
+                price: parseFloat(String(formData.price).replace(/,/g, '')),
+                original_price: formData.originalPrice ? parseFloat(String(formData.originalPrice).replace(/,/g, '')) : null,
+                discount_label: formData.discount,
+                category: formData.category,
+                description: formData.description,
+                is_promo: formData.isPromo,
+                variants: formData.variants.map(v => ({ name: v.name, price: parseFloat(String(v.price).replace(/,/g, '')) }))
+            };
+
+            let savedProduct;
+
             if (isEditing && editId) {
-                // Update existing product
-                const productDoc = doc(db, "products", editId);
-                await updateDoc(productDoc, {
-                    ...formData,
-                    updatedAt: new Date()
-                });
-                Swal.fire({
-                    title: 'Berhasil!',
-                    text: 'Produk berhasil diperbarui.',
-                    icon: 'success',
-                    confirmButtonColor: '#111827',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
+                savedProduct = await adminProductApi.updateProduct(editId, apiData);
             } else {
-                // Add new product
-                await addDoc(productsCollectionRef, {
-                    ...formData,
-                    createdAt: new Date()
-                });
-                Swal.fire({
-                    title: 'Berhasil!',
-                    text: 'Produk baru berhasil ditambahkan.',
-                    icon: 'success',
-                    confirmButtonColor: '#111827',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
+                savedProduct = await adminProductApi.createProduct(apiData);
             }
 
+            const productId = savedProduct.product?.id || editId;
+
+            // Handle file uploads if any
+            if (filesToUpload.length > 0 && productId) {
+                setUploadProgress(50);
+                await adminProductApi.uploadMedia(productId, filesToUpload);
+                setFilesToUpload([]);
+            }
+            
+            Swal.fire({
+                title: 'Berhasil!',
+                text: isEditing ? 'Produk berhasil diperbarui.' : 'Produk baru berhasil ditambahkan.',
+                icon: 'success',
+                confirmButtonColor: '#111827',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
             setIsModalOpen(false);
+            setUploadProgress(0);
+            setIsUploading(false);
             fetchProducts();
         } catch (error) {
+            setIsUploading(false);
             console.error("Error saving product: ", error);
             Swal.fire({
                 title: 'Gagal!',
-                text: 'Terjadi kesalahan saat menyimpan produk.',
+                text: error.response?.data?.message || 'Terjadi kesalahan saat menyimpan produk.',
                 icon: 'error',
                 confirmButtonColor: '#111827'
             });
@@ -301,8 +252,7 @@ export default function Products() {
 
         if (result.isConfirmed) {
             try {
-                const productDoc = doc(db, "products", id);
-                await deleteDoc(productDoc);
+                await adminProductApi.deleteProduct(id);
                 fetchProducts();
                 Swal.fire({
                     title: 'Terhapus!',
@@ -334,7 +284,7 @@ export default function Products() {
     const handleAddDummyData = async () => {
         const result = await Swal.fire({
             title: 'Tambahkan Data Dummy?',
-            text: "Ini akan menambahkan beberapa produk contoh ke database.",
+            text: "Ini akan menambahkan beberapa produk contoh ke database via API.",
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#111827',
@@ -347,9 +297,22 @@ export default function Products() {
             setLoading(true);
             try {
                 const batchPromises = dummyData.map(product => {
-                    return addDoc(productsCollectionRef, {
-                        ...product,
-                        createdAt: new Date()
+                    const priceNum = parseFloat(String(product.price).replace(/,/g, ''));
+                    const originalPriceNum = parseFloat(String(product.originalPrice).replace(/,/g, ''));
+                    return adminProductApi.createProduct({
+                        title: product.title,
+                        price: priceNum,
+                        original_price: originalPriceNum,
+                        discount_label: product.discount,
+                        category: product.category,
+                        description: product.description,
+                        is_promo: false
+                    }).then(res => {
+                        // After creation, we ideally want to set the main image URL to the dummy URL
+                        // But since API requires file uploads and doesn't take 'image' URL directly in store endpoint easily,
+                        // we can try fetching the product and assuming the main image will be fallback.
+                        // For a real app, dummy data would include sample media files.
+                        return res;
                     });
                 });
                 await Promise.all(batchPromises);
@@ -427,17 +390,22 @@ export default function Products() {
                         {isGridView ? (
                             // GRID VIEW
                             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                {products.map((product) => (
+                                {products.map((product) => {
+                                    const productImage = product.main_image || product.image || '/logo.png';
+                                    const discountLabel = product.discount_label || product.discount;
+                                    const originalPrice = product.original_price || product.originalPrice;
+
+                                    return (
                                     <div key={product.id} className="group border border-gray-100 rounded-xl overflow-hidden hover:shadow-md transition-shadow">
                                         <div className="aspect-square bg-gray-100 relative overflow-hidden">
                                             <img
-                                                src={product.image}
+                                                src={productImage}
                                                 alt={product.title}
                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                             />
-                                            {product.discount && (
+                                            {discountLabel && (
                                                 <div className="absolute top-2 right-2 bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded">
-                                                    {product.discount} OFF
+                                                    {discountLabel}
                                                 </div>
                                             )}
                                         </div>
@@ -445,13 +413,13 @@ export default function Products() {
                                             <div className="text-xs text-gray-500 mb-1">{product.category}</div>
                                             <h3 className="font-bold text-gray-900 mb-2 truncate">
                                                 {product.title}
-                                                {product.isPromo && <span className="ml-2 text-[10px] bg-[var(--color-primary)] text-white px-1.5 py-0.5 rounded uppercase font-bold">Promo</span>}
+                                                {product.is_promo && <span className="ml-2 text-[10px] bg-[var(--color-primary)] text-white px-1.5 py-0.5 rounded uppercase font-bold">Promo</span>}
                                             </h3>
                                             <div className="flex items-center justify-between">
                                                 <div>
-                                                    <div className="font-bold text-[var(--color-primary)]">Rp. {product.price}</div>
-                                                    {product.originalPrice && (
-                                                        <div className="text-xs text-gray-400 line-through">Rp. {product.originalPrice}</div>
+                                                    <div className="font-bold text-[var(--color-primary)]">Rp. {parseFloat(product.price).toLocaleString('id-ID')}</div>
+                                                    {originalPrice && (
+                                                        <div className="text-xs text-gray-400 line-through">Rp. {parseFloat(originalPrice).toLocaleString('id-ID')}</div>
                                                     )}
                                                 </div>
                                                 <div className="flex gap-1">
@@ -471,7 +439,8 @@ export default function Products() {
                                             </div>
                                         </div>
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             // LIST VIEW (TABLE)
@@ -488,33 +457,38 @@ export default function Products() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
-                                        {products.map((product) => (
+                                        {products.map((product) => {
+                                            const productImage = product.main_image || product.image || '/logo.png';
+                                            const discountLabel = product.discount_label || product.discount;
+                                            const originalPrice = product.original_price || product.originalPrice;
+
+                                            return (
                                             <tr key={product.id} className="hover:bg-gray-50 transition-colors">
                                                 <td className="p-4">
                                                     <div className="flex items-center gap-3">
                                                         <img
-                                                            src={product.image}
+                                                            src={productImage}
                                                             alt={product.title}
                                                             className="w-12 h-12 rounded-lg object-cover bg-gray-100"
                                                         />
                                                         <span className="font-medium text-gray-900">
                                                             {product.title}
-                                                            {product.isPromo && <span className="ml-2 text-[10px] bg-[var(--color-primary)] text-white px-1.5 py-0.5 rounded uppercase font-bold">Promo</span>}
+                                                            {product.is_promo && <span className="ml-2 text-[10px] bg-[var(--color-primary)] text-white px-1.5 py-0.5 rounded uppercase font-bold">Promo</span>}
                                                         </span>
                                                     </div>
                                                 </td>
                                                 <td className="p-4 text-gray-600">{product.category}</td>
                                                 <td className="p-4 text-gray-500 text-sm max-w-xs truncate">{product.description || '-'}</td>
                                                 <td className="p-4 font-medium">
-                                                    <div>Rp. {product.price}</div>
-                                                    {product.originalPrice && (
-                                                        <div className="text-xs text-gray-400 line-through">Rp. {product.originalPrice}</div>
+                                                    <div>Rp. {parseFloat(product.price).toLocaleString('id-ID')}</div>
+                                                    {originalPrice && (
+                                                        <div className="text-xs text-gray-400 line-through">Rp. {parseFloat(originalPrice).toLocaleString('id-ID')}</div>
                                                     )}
                                                 </td>
                                                 <td className="p-4">
-                                                    {product.discount ? (
+                                                    {discountLabel ? (
                                                         <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-bold">
-                                                            {product.discount} OFF
+                                                            {discountLabel}
                                                         </span>
                                                     ) : (
                                                         <span className="text-gray-400 text-sm">-</span>
@@ -537,7 +511,8 @@ export default function Products() {
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ))}
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

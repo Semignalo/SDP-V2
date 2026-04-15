@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../lib/firebase';
-import { collection, getDocs, query } from 'firebase/firestore';
+import { productApi } from '../api/productApi';
 import ProductCard from '../components/ProductCard';
 import { ChevronDown, SlidersHorizontal, ChevronRight, Check } from 'lucide-react';
 
@@ -26,12 +25,8 @@ export default function Catalog() {
         const fetchProducts = async () => {
             try {
                 setLoading(true);
-                const q = query(collection(db, "products"));
-                const querySnapshot = await getDocs(q);
-                const productsData = querySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
+                const response = await productApi.getProducts({ per_page: 50 });
+                const productsData = response.data || [];
                 setProducts(productsData);
                 setFilteredProducts(productsData);
             } catch (error) {
@@ -55,11 +50,9 @@ export default function Catalog() {
             );
         }
 
-        // 2. Filter by Price
+        // 2. Filter by Price (backend returns decimal string e.g. "150000.00")
         result = result.filter(product => {
-            // Parse price string "1,250,000" to number 1250000
-            const priceStr = product.price ? product.price.toString().replace(/,/g, '') : '0';
-            const price = parseInt(priceStr) || 0;
+            const price = parseFloat(String(product.price || '0').replace(/[^0-9.]/g, '')) || 0;
             return price >= priceRange[0] && price <= priceRange[1];
         });
 

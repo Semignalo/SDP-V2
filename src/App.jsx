@@ -14,9 +14,12 @@ import Catalog from './pages/Catalog';
 import AdminOrders from './pages/admin/Orders';
 import AdminPaymentSettings from './pages/admin/PaymentSettings';
 import AdminUsers from './pages/admin/Users';
+import AdminCommissions from './pages/admin/Commissions';
+import AdminTiers from './pages/admin/Tiers';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
 import CenterShop from './pages/CenterShop';
+import JoinStarcenter from './pages/JoinStarcenter';
 
 function App() {
   return (
@@ -33,6 +36,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/center" element={<CenterShop />} />
+        <Route path="/join-starcenter" element={<JoinStarcenter />} />
       </Route>
 
       {/* Admin Routes */}
@@ -44,6 +48,8 @@ function App() {
         <Route path="orders" element={<AdminOrders />} />
         <Route path="products" element={<AdminProducts />} />
         <Route path="users" element={<AdminUsers />} />
+        <Route path="commissions" element={<AdminCommissions />} />
+        <Route path="tiers" element={<AdminTiers />} />
       </Route>
     </Routes>
   );

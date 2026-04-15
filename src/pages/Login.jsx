@@ -3,9 +3,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AtSign, Lock, User, LogIn, UserPlus } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { getErrorMessage } from '../api/client';
 
 export default function Login() {
-    const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
@@ -17,6 +17,11 @@ export default function Login() {
 
     // Default redirect to home, or where they came from
     const from = location.state?.from?.pathname || "/";
+    const searchParams = new URLSearchParams(location.search);
+    
+    // Initialize isLogin based on URL parameter
+    const [isLogin, setIsLogin] = useState(searchParams.get('mode') === 'register' ? false : true);
+    const refCodeParam = searchParams.get('ref') || '';
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -33,7 +38,7 @@ export default function Login() {
                     showConfirmButton: false
                 });
             } else {
-                await signup(email, password, name);
+                await signup(email, password, name, refCodeParam || null);
                 Swal.fire({
                     icon: 'success',
                     title: 'Registrasi Berhasil',
@@ -48,23 +53,10 @@ export default function Login() {
             Swal.fire({
                 icon: 'error',
                 title: 'Oops...',
-                text: getErrorMessage(error.code)
+                text: getErrorMessage(error)
             });
         } finally {
             setLoading(false);
-        }
-    };
-
-    const getErrorMessage = (errorCode) => {
-        switch (errorCode) {
-            case 'auth/invalid-credential':
-                return 'Email atau password salah. Coba lagi.';
-            case 'auth/email-already-in-use':
-                return 'Email ini sudah terdaftar. Silakan login.';
-            case 'auth/weak-password':
-                return 'Password terlalu lemah. Minimal 6 karakter.';
-            default:
-                return 'Terjadi kesalahan. Silakan coba lagi.';
         }
     };
 
@@ -84,6 +76,12 @@ export default function Login() {
                 {/* Form Section */}
                 <div className="p-8">
                     <form onSubmit={handleSubmit} className="space-y-5">
+                        {!isLogin && refCodeParam && (
+                            <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-xl text-emerald-800 text-sm font-medium mb-4 flex items-center justify-center">
+                                Bergabung dengan referral: <span className="font-bold ml-1">{refCodeParam}</span>
+                            </div>
+                        )}
+
                         {!isLogin && (
                             <div>
                                 <label className="block text-sm font-medium text-neutral-700 mb-1">Nama Lengkap</label>

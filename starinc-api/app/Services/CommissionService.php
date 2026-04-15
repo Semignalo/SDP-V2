@@ -1,0 +1,106 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Commission;
+use App\Models\Order;
+use App\Models\StarcenterNetwork;
+use App\Models\SystemSetting;
+use App\Models\User;
+
+class CommissionService
+{
+    /**
+     * Distribute commissions when an order is completed.
+     */
+    public function distribute(Order $order): void
+    {
+        $buyer = $order->user;
+        if (!$buyer || !$buyer->referrer_id) {
+            return;
+        }
+
+        $referrer = User::find($buyer->referrer_id);
+        if (!$referrer) {
+            return;
+        }
+
+        $orderAmount = $order->subtotal;
+
+        if ($referrer->role === 'regular') {
+            // SDP: Single-level commission only
+            $rate = (float) SystemSetting::getValue('sdp_commission_rate', 5);
+            $this->createCommission($referrer, $order, $buyer, $orderAmount, $rate, 1);
+            return;
+        }
+
+        if ($referrer->role === 'starcenter') {
+            // Starcenter: Multi-level commission (max 7 levels)
+            $this->distributeMLM($referrer, $order, $buyer, $orderAmount);
+        }
+    }
+
+    /**
+     * Distribute MLM commissions up the starcenter chain.
+     */
+    private function distributeMLM(User $starcenter, Order $order, User $buyer, float $orderAmount): void
+    {
+        $maxLevel = (int) SystemSetting::getValue('starcenter_max_level', 7);
+        $level = 1;
+        $current = $starcenter;
+
+        while ($current && $level <= $maxLevel) {
+            $rateKey = "starcenter_level_{$level}_rate";
+            $rate = (float) SystemSetting::getValue($rateKey, 0);
+
+            if ($rate > 0) {
+                $this->createCommission($current, $order, $buyer, $orderAmount, $rate, $level);
+            }
+
+            // Find upline in starcenter network
+            $network = StarcenterNetwork::where('downline_id', $current->id)
+                ->where('depth', 1)
+                ->first();
+
+            $current = $network ? User::find($network->upline_id) : null;
+            $level++;
+        }
+    }
+
+    /**
+     * Create a single commission record.
+     */
+    private function createCommission(User $earner, Order $order, User $buyer, float $orderAmount, float $rate, int $level): void
+    {
+        // Don't create duplicate commissions
+        $exists = Commission::where('user_id', $earner->id)
+            ->where('order_id', $order->id)
+            ->where('level', $level)
+            ->exists();
+
+        if ($exists) {
+            return;
+        }
+
+        Commission::create([
+            'user_id'           => $earner->id,
+            'order_id'          => $order->id,
+            'source_user_id'    => $buyer->id,
+            'order_amount'      => $orderAmount,
+            'commission_rate'   => $rate,
+            'commission_amount' => round($orderAmount * $rate / 100, 2),
+            'level'             => $level,
+            'status'            => 'pending',
+        ]);
+    }
+
+    /**
+     * Cancel commissions when an order is reversed from completed.
+     */
+    public function cancelForOrder(Order $order): void
+    {
+        Commission::where('order_id', $order->id)
+            ->where('status', 'pending')
+            ->update(['status' => 'cancelled']);
+    }
+}

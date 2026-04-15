@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { orderApi } from '../api/orderApi';
 import { Package, Clock, CheckCircle, Truck, XCircle, Search, ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
@@ -21,16 +20,15 @@ export default function TrackOrders() {
                     return;
                 }
 
-                const orderPromises = myOrderIds.map(id => getDoc(doc(db, "orders", id)));
+                const orderPromises = myOrderIds.map(id => orderApi.getInvoice(id).catch(e => null));
                 const orderDocs = await Promise.all(orderPromises);
 
                 const fetchedOrders = orderDocs
-                    .filter(doc => doc.exists())
-                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .filter(doc => doc !== null)
                     // Sort descending by created date
                     .sort((a, b) => {
-                        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
-                        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
+                        const dateA = a.created_at ? new Date(a.created_at) : new Date(0);
+                        const dateB = b.created_at ? new Date(b.created_at) : new Date(0);
                         return dateB - dateA;
                     });
 
@@ -51,21 +49,20 @@ export default function TrackOrders() {
 
         setLoading(true);
         try {
-            const docRef = doc(db, "orders", searchId.trim());
-            const docSnap = await getDoc(docRef);
+            const orderDoc = await orderApi.getInvoice(searchId.trim());
 
-            if (docSnap.exists()) {
+            if (orderDoc) {
                 // If found but not in local storage, add it so they can track it later
                 const myOrders = JSON.parse(localStorage.getItem('my_orders') || '[]');
-                if (!myOrders.includes(docSnap.id)) {
-                    myOrders.push(docSnap.id);
+                if (!myOrders.includes(orderDoc.order_number)) {
+                    myOrders.push(orderDoc.order_number);
                     localStorage.setItem('my_orders', JSON.stringify(myOrders));
                 }
 
                 // Add to current state if not already there
                 setOrders(prev => {
-                    if (prev.find(o => o.id === docSnap.id)) return prev;
-                    return [{ id: docSnap.id, ...docSnap.data() }, ...prev];
+                    if (prev.find(o => o.order_number === orderDoc.order_number)) return prev;
+                    return [orderDoc, ...prev];
                 });
 
                 Swal.fire({
@@ -77,16 +74,15 @@ export default function TrackOrders() {
                     timer: 2000
                 });
                 setSearchId('');
-            } else {
-                Swal.fire({
-                    title: 'Tidak Ditemukan',
-                    text: 'ID Pesanan yang Anda masukkan tidak valid.',
-                    icon: 'error',
-                    confirmButtonColor: '#111827'
-                });
             }
         } catch (error) {
             console.error("Error searching order:", error);
+            Swal.fire({
+                title: 'Tidak Ditemukan',
+                text: 'ID Pesanan yang Anda masukkan tidak valid.',
+                icon: 'error',
+                confirmButtonColor: '#111827'
+            });
         } finally {
             setLoading(false);
         }
@@ -159,8 +155,10 @@ export default function TrackOrders() {
                 ) : (
                     <div className="space-y-4">
                         {orders.map((order) => {
-                            const dateStr = order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Tanggal tidak tersedia';
+                            const dateStr = order.created_at ? new Date(order.created_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Tanggal tidak tersedia';
                             const StatusIcon = getStatusInfo(order.status).icon;
+                            
+                            const orderId = order.order_number || order.id;
 
                             return (
                                 <div key={order.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200">
@@ -168,11 +166,11 @@ export default function TrackOrders() {
                                     <div className="border-b border-gray-50 p-4 md:p-5 flex flex-wrap justify-between items-center gap-4 bg-gray-50/50">
                                         <div>
                                             <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-bold text-gray-900">Order #{order.id.slice(-6).toUpperCase()}</span>
+                                                <span className="font-bold text-gray-900">Order #{String(orderId).toUpperCase()}</span>
                                                 <span className="text-xs text-gray-400">|</span>
                                                 <span className="text-xs text-gray-500">{dateStr}</span>
                                             </div>
-                                            <p className="text-sm text-gray-600">Penerima: <span className="font-medium text-gray-900">{order.customer?.name}</span></p>
+                                            <p className="text-sm text-gray-600">Penerima: <span className="font-medium text-gray-900">{order.customer?.name || order.customer_info?.name || '-'}</span></p>
                                         </div>
 
                                         <div className={`px-4 py-1.5 rounded-full border border-gray-200 text-sm font-medium flex items-center gap-2 ${getStatusInfo(order.status).color}`}>
@@ -191,15 +189,15 @@ export default function TrackOrders() {
                                                     <>
                                                         <div className="w-20 h-20 bg-gray-100 rounded-md overflow-hidden flex-shrink-0 border border-gray-100">
                                                             <img
-                                                                src={order.items[0].image}
-                                                                alt={order.items[0].title}
+                                                                src={order.items[0].product?.main_image || order.items[0].image || '/logo.png'}
+                                                                alt={order.items[0].product?.title || order.items[0].title}
                                                                 className="w-full h-full object-cover"
                                                                 onError={(e) => { e.target.src = 'https://via.placeholder.com/150?text=Error'; }}
                                                             />
                                                         </div>
                                                         <div className="flex-1">
-                                                            <h4 className="font-bold text-gray-900 text-sm md:text-base line-clamp-1">{order.items[0].title}</h4>
-                                                            {order.items[0].variantName && <p className="text-xs font-medium text-[var(--color-primary)] mb-1">{order.items[0].variantName}</p>}
+                                                            <h4 className="font-bold text-gray-900 text-sm md:text-base line-clamp-1">{order.items[0].product?.title || order.items[0].title}</h4>
+                                                            {order.items[0].variant?.name && <p className="text-xs font-medium text-[var(--color-primary)] mb-1">{order.items[0].variant.name}</p>}
                                                             <p className="text-xs text-gray-500 mb-1">{order.items[0].quantity}x barang</p>
                                                             {order.items.length > 1 && (
                                                                 <p className="text-xs font-medium text-[var(--color-accent)]">
@@ -221,14 +219,14 @@ export default function TrackOrders() {
                                                 {/* If Waiting for payment, show pay button */}
                                                 {order.status === 'Menunggu Pembayaran' ? (
                                                     <button
-                                                        onClick={() => navigate(`/invoice/${order.id}`)}
+                                                        onClick={() => navigate(`/invoice/${orderId}`)}
                                                         className="w-full bg-[#047857] hover:bg-[#065F46] text-white py-2 px-4 rounded font-bold text-sm transition-colors"
                                                     >
                                                         Bayar Sekarang
                                                     </button>
                                                 ) : (
                                                     <button
-                                                        onClick={() => navigate(`/invoice/${order.id}`)}
+                                                        onClick={() => navigate(`/invoice/${orderId}`)}
                                                         className="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2 px-4 rounded font-medium text-sm transition-colors flex items-center justify-center gap-2"
                                                     >
                                                         Lihat Invoice <ArrowRight size={16} />

@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getTierProgress, TIER_CONFIG } from '../lib/tierUtils';
 import { Navigate, Link } from 'react-router-dom';
-import { TrendingUp, ShieldCheck, Clock, Crown, ChevronRight, AlertCircle, ShoppingBag, User, Package, Settings, Home, Info, X } from 'lucide-react';
+import { TrendingUp, ShieldCheck, Clock, Crown, ChevronRight, AlertCircle, ShoppingBag, User, Package, Settings, Home, Info, X, Users, Wallet } from 'lucide-react';
 import ProfileEdit from '../components/profile/ProfileEdit';
 import ProfileOrders from '../components/profile/ProfileOrders';
+import ProfileNetwork from '../components/profile/ProfileNetwork';
+import ProfileCommissions from '../components/profile/ProfileCommissions';
 
 export default function Profile() {
     const { currentUser, userData, userRole } = useAuth();
@@ -14,11 +16,11 @@ export default function Profile() {
 
     useEffect(() => {
         if (userData && userRole !== 'starcenter' && userRole !== 'admin') {
-            const lastTx = userData.lastTransactionDate?.toDate ? userData.lastTransactionDate.toDate() : userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date();
+            // Backend returns ISO string (e.g. "2026-04-01T..."), not Firestore Timestamp
+            const rawDate = userData.last_transaction_at || userData.created_at;
+            const lastTx = rawDate ? new Date(rawDate) : new Date();
             const now = new Date();
-            const diffTime = Math.abs(now - lastTx);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
+            const diffDays = Math.ceil((now - lastTx) / (1000 * 60 * 60 * 24));
             const remaining = 30 - diffDays;
 
             let text = '';
@@ -34,14 +36,15 @@ export default function Profile() {
     if (!currentUser) return <Navigate to="/login" replace />;
     if (!userData) return <div className="min-h-screen pt-24 pb-12 text-center text-gray-500">Memuat profil...</div>;
 
-    const tierData = TIER_CONFIG[userData.tier] || TIER_CONFIG.bronze;
-    const progressData = getTierProgress(userData.tier, userData.cumulativeSpending);
+    const tierData = userData.tier || TIER_CONFIG.bronze; // Backend returns full tier details
+    const tierSlug = userData.tier?.slug || 'bronze';
+    const progressData = getTierProgress(tierSlug, userData.cumulative_spending || 0);
 
     const getThemeClass = () => {
         if (userRole === 'admin') return 'bg-red-600';
         if (userRole === 'starcenter') return 'bg-gradient-to-r from-blue-700 to-indigo-900';
         
-        switch(userData.tier?.toLowerCase()) {
+        switch(tierSlug.toLowerCase()) {
             case 'bronze': return 'bg-gradient-to-r from-[#8C5E35] to-[#593922]';
             case 'silver': return 'bg-gradient-to-r from-slate-500 to-gray-600';
             case 'gold': return 'bg-gradient-to-r from-yellow-600 to-amber-600';
@@ -88,27 +91,39 @@ export default function Profile() {
                                 </div>
                             ) : (
                                 <div className="inline-flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full text-sm font-medium backdrop-blur-md">
-                                    <span className="uppercase font-bold text-white">{userData.tier}</span> Member
+                                    <span className="uppercase font-bold text-white">{tierData.name}</span> Member
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* TWO FIX BUTTONS (No Horizontal Scroll) */}
+                {/* 4 MENU TABS */}
                 {activeTab !== 'settings' && (
-                    <div className="grid grid-cols-2 gap-3 md:gap-4 mb-8">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-8">
                         <button
                             onClick={() => setActiveTab('overview')}
-                            className={`flex justify-center items-center gap-2 p-4 rounded-2xl font-bold text-sm tracking-wide transition-all ${activeTab === 'overview' ? 'bg-primary text-white shadow-lg' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+                            className={`flex justify-center items-center gap-2 p-3 sm:p-4 rounded-2xl font-bold text-xs sm:text-sm tracking-wide transition-all ${activeTab === 'overview' ? 'bg-primary text-white shadow-lg' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
                         >
-                            <Home size={18} /> <span className="hidden sm:inline">Overview</span><span className="sm:hidden">Dashboard</span>
+                            <Home size={18} /> <span className="hidden sm:inline">Overview</span><span className="sm:hidden">Dash</span>
                         </button>
                         <button
                             onClick={() => setActiveTab('orders')}
-                            className={`flex justify-center items-center gap-2 p-4 rounded-2xl font-bold text-sm tracking-wide transition-all ${activeTab === 'orders' ? 'bg-primary text-white shadow-lg' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+                            className={`flex justify-center items-center gap-2 p-3 sm:p-4 rounded-2xl font-bold text-xs sm:text-sm tracking-wide transition-all ${activeTab === 'orders' ? 'bg-primary text-white shadow-lg' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
                         >
-                            <Package size={18} /> Order History <span className="hidden sm:inline">Pesanan</span>
+                            <Package size={18} /> <span className="hidden sm:inline">Order History</span><span className="sm:hidden">Pesanan</span>
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('network')}
+                            className={`flex justify-center items-center gap-2 p-3 sm:p-4 rounded-2xl font-bold text-xs sm:text-sm tracking-wide transition-all ${activeTab === 'network' ? 'bg-primary text-white shadow-lg' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+                        >
+                            <Users size={18} /> Jaringan
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('commissions')}
+                            className={`flex justify-center items-center gap-2 p-3 sm:p-4 rounded-2xl font-bold text-xs sm:text-sm tracking-wide transition-all ${activeTab === 'commissions' ? 'bg-primary text-white shadow-lg' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+                        >
+                            <Wallet size={18} /> Komisi
                         </button>
                     </div>
                 )}
@@ -130,6 +145,12 @@ export default function Profile() {
 
                 {/* TAB CONTENT: Riwayat Pesanan */}
                 {activeTab === 'orders' && <ProfileOrders />}
+
+                {/* TAB CONTENT: Jaringan */}
+                {activeTab === 'network' && <ProfileNetwork />}
+
+                {/* TAB CONTENT: Komisi */}
+                {activeTab === 'commissions' && <ProfileCommissions />}
 
                 {/* TAB CONTENT: Overview */}
                 {activeTab === 'overview' && (
@@ -155,7 +176,7 @@ export default function Profile() {
                                     <div className="mb-4">
                                         <div className="flex justify-between items-end mb-2">
                                             <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">
-                                                Saat ini: <span className="font-bold text-gray-900">{userData.tier}</span>
+                                                Saat ini: <span className="font-bold text-gray-900">{tierData.name}</span>
                                             </div>
                                             {!progressData.maxReached && (
                                                 <div className="text-sm font-medium text-[var(--color-primary)] uppercase tracking-wider">
@@ -197,12 +218,12 @@ export default function Profile() {
                                 <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 flex flex-col justify-center text-center">
                                     <div className="text-gray-500 text-sm font-medium mb-2 uppercase tracking-wide">Total Pengeluaran</div>
                                     <div className="text-3xl font-bold text-gray-900 mb-6">
-                                        Rp{(userData.cumulativeSpending || 0).toLocaleString('id-ID')}
+                                        Rp{(userData.cumulative_spending || 0).toLocaleString('id-ID')}
                                     </div>
 
-                                    <div className="text-gray-500 text-sm font-medium mb-2 uppercase tracking-wide">Diskon Aktifmu</div>
+                                    <div className="text-xs text-gray-500 font-medium mb-2 uppercase tracking-wide">Diskon Aktifmu</div>
                                     <div className="text-4xl font-extrabold text-[var(--color-primary)] mb-6">
-                                        {tierData.discount}%
+                                        {tierData.discount_percent ?? tierData.discount ?? 0}%
                                     </div>
 
                                     <Link to="/products" className="w-full py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-800 transition shadow-lg shadow-gray-200 flex justify-center items-center gap-2">
@@ -219,7 +240,7 @@ export default function Profile() {
                                 <AlertCircle className="text-blue-500 mx-auto mb-4" size={40} />
                                 <h2 className="text-2xl font-bold text-gray-900 mb-3">Distributor Panel</h2>
                                 <p className="text-gray-600 mb-6 text-sm">
-                                    Sebagai Starcenter, rank kamu dikunci secara permanen di Diamond (Diskon {tierData?.discount}%) dan tidak dapat di-downgrade. Pembelian harus dilakukan dalam batch grosir secara rutin melalui halaman Center khusus.
+                                    Sebagai Starcenter, rank kamu dikunci secara permanen di Diamond (Diskon {tierData?.discount_percent ?? tierData?.discount}%) dan tidak dapat di-downgrade. Pembelian harus dilakukan dalam batch grosir secara rutin melalui halaman Center khusus.
                                 </p>
                                 <Link to="/center" className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition shadow-lg shadow-blue-200">
                                     Masuk Katalog Center <ChevronRight size={18} />

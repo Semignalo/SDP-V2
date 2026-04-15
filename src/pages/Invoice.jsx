@@ -1,52 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { db } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import { CheckCircle, Copy, AlertCircle, Printer } from 'lucide-react';
+import { orderApi } from '../api/orderApi';
+import { CheckCircle, Copy, AlertCircle, Printer, Upload } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { getErrorMessage } from '../api/client';
 
 export default function Invoice() {
-    const { id } = useParams();
+    const { id } = useParams(); // order_number from Laravel
     const [searchParams] = useSearchParams();
     const isPrintMode = searchParams.get('print') === 'true';
-    
+
     const [order, setOrder] = useState(null);
     const [paymentConfig, setPaymentConfig] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [uploadingProof, setUploadingProof] = useState(false);
 
     useEffect(() => {
-        const fetchOrderAndPayment = async () => {
+        const fetchInvoice = async () => {
             try {
-                // Fetch Order
-                const orderDoc = await getDoc(doc(db, "orders", id));
-                if (orderDoc.exists()) {
-                    setOrder({ id: orderDoc.id, ...orderDoc.data() });
-                } else {
-                    console.log("Order not found!");
-                }
-
-                // Fetch Payment Config
-                const paymentDoc = await getDoc(doc(db, "settings", "payment"));
-                if (paymentDoc.exists()) {
-                    setPaymentConfig(paymentDoc.data());
-                } else {
-                    // Fallback default config if admin hasn't set it yet
-                    setPaymentConfig({
-                        bankName: 'BCA',
-                        accountNumber: '888888888',
-                        accountName: 'PT BBK'
-                    });
-                }
+                // Backend returns: { order: {..., items: [...], payment_proof: {...}}, payment_config: {...} }
+                const resp = await orderApi.getInvoice(id);
+                setOrder(resp.order ?? resp); // support both nested and flat
+                setPaymentConfig(resp.payment_config ?? null);
             } catch (error) {
-                console.error("Error fetching data:", error);
+                console.error('Error fetching invoice:', error);
             } finally {
                 setLoading(false);
             }
         };
 
-        if (id) {
-            fetchOrderAndPayment();
-        }
+        if (id) fetchInvoice();
     }, [id]);
 
     useEffect(() => {
@@ -58,17 +41,36 @@ export default function Invoice() {
     }, [loading, order, isPrintMode]);
 
     const handleCopy = (text) => {
-        navigator.clipboard.writeText(text);
-        Swal.fire({
-            title: 'Tersalin!',
-            text: 'Nomor rekening telah disalin.',
-            icon: 'success',
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 1500
-        });
+        navigator.clipboard.writeText(String(text || ''));
+        Swal.fire({ title: 'Tersalin!', text: 'Nomor rekening telah disalin.', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
     };
+
+    const handleUploadProof = async (file) => {
+        if (!file || !order) return;
+        setUploadingProof(true);
+        try {
+            await orderApi.uploadPaymentProof(order.id, file);
+            Swal.fire('Berhasil!', 'Bukti pembayaran berhasil diunggah dan sedang diverifikasi.', 'success');
+        } catch (err) {
+            Swal.fire('Gagal', getErrorMessage(err), 'error');
+        } finally {
+            setUploadingProof(false);
+        }
+    };
+
+    // Derive payment status from proof or order status
+    const proofStatus = order?.payment_proof?.status; // pending | approved | rejected
+    const paymentStatusLabel = proofStatus === 'approved' ? 'Lunas'
+        : proofStatus === 'rejected' ? 'Ditolak'
+        : order?.status === 'completed' ? 'Lunas'
+        : 'Menunggu Pembayaran';
+    const paymentStatusClass = (proofStatus === 'approved' || order?.status === 'completed')
+        ? 'text-green-600 bg-green-100'
+        : proofStatus === 'rejected' ? 'text-red-600 bg-red-100'
+        : 'text-orange-600 bg-orange-100';
+
+    // Storage base URL
+    const storageUrl = import.meta.env.VITE_STORAGE_URL || 'http://localhost:8000/storage';
 
     const handlePrint = () => {
         window.print();
@@ -113,52 +115,107 @@ export default function Invoice() {
                         </h2>
                     </div>
 
-                    <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-                        <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            Informasi Transfer
-                        </h3>
-
-                        <div className="space-y-4">
-                            <div>
-                                <p className="text-sm text-gray-500">Bank</p>
-                                <p className="font-medium text-lg uppercase">{paymentConfig?.bankName}</p>
-                            </div>
-
-                            <div>
-                                <p className="text-sm text-gray-500">Nomor Rekening</p>
-                                <div className="flex items-center justify-between bg-white px-4 py-3 border border-gray-200 rounded-md mt-1">
-                                    <span className="font-bold text-xl tracking-wider text-gray-900">
-                                        {paymentConfig?.accountNumber}
-                                    </span>
-                                    <button
-                                        onClick={() => handleCopy(paymentConfig?.accountNumber)}
-                                        className="text-[var(--color-accent)] hover:text-gray-900 flex items-center gap-1 text-sm font-medium transition-colors"
-                                    >
-                                        <Copy size={16} />
-                                        Salin
-                                    </button>
+                    {/* Payment Config */}
+                    {paymentConfig && (
+                        <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                            <h3 className="font-bold text-gray-900 mb-4">Informasi Transfer</h3>
+                            <div className="space-y-4">
+                                <div>
+                                    <p className="text-sm text-gray-500">Bank</p>
+                                    {/* Backend uses snake_case: bank_name, account_number, account_name */}
+                                    <p className="font-medium text-lg uppercase">{paymentConfig.bank_name}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-500">Nomor Rekening</p>
+                                    <div className="flex items-center justify-between bg-white px-4 py-3 border border-gray-200 rounded-md mt-1">
+                                        <span className="font-bold text-xl tracking-wider text-gray-900">
+                                            {paymentConfig.account_number}
+                                        </span>
+                                        <button
+                                            onClick={() => handleCopy(paymentConfig.account_number)}
+                                            className="text-[var(--color-accent)] hover:text-gray-900 flex items-center gap-1 text-sm font-medium transition-colors"
+                                        >
+                                            <Copy size={16} /> Salin
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-500">Atas Nama</p>
+                                    <p className="font-medium">{paymentConfig.account_name}</p>
                                 </div>
                             </div>
+                        </div>
+                    )}
 
-                            <div>
-                                <p className="text-sm text-gray-500">Atas Nama</p>
-                                <p className="font-medium">{paymentConfig?.accountName}</p>
+                    {/* Order Meta */}
+                    <div className="border-t border-gray-100 pt-6 space-y-2">
+                        <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">No. Order</span>
+                            <span className="font-mono font-medium">#{order.order_number}</span>
+                        </div>
+                        {order.discount_amount > 0 && (
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Diskon Tier ({order.discount_percent}%)</span>
+                                <span className="font-medium text-[var(--color-primary)]">- Rp. {parseFloat(order.discount_amount).toLocaleString('id-ID')}</span>
                             </div>
+                        )}
+                        <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">Ongkos Kirim</span>
+                            <span className="font-medium">Rp. {parseFloat(order.shipping_cost || 0).toLocaleString('id-ID')}</span>
                         </div>
-                    </div>
-
-                    <div className="border-t border-gray-100 pt-6">
-                        <div className="flex justify-between text-sm mb-2">
-                            <span className="text-gray-500">Order ID:</span>
-                            <span className="font-medium">#{order.id.slice(-6).toUpperCase()}</span>
-                        </div>
-                        <div className="flex justify-between text-sm mb-2">
-                            <span className="text-gray-500">Status:</span>
-                            <span className="font-medium text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full text-xs">
-                                {order.status}
+                        <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">Status Pembayaran</span>
+                            <span className={`font-bold px-2 py-0.5 rounded-full text-xs ${paymentStatusClass}`}>
+                                {paymentStatusLabel}
                             </span>
                         </div>
                     </div>
+
+                    {/* Items */}
+                    {order.items?.length > 0 && (
+                        <div className="border-t border-gray-100 pt-6">
+                            <h4 className="text-sm font-bold text-gray-900 mb-3">Pesanan Kamu</h4>
+                            <div className="space-y-3">
+                                {order.items.map((item, idx) => (
+                                    <div key={idx} className="flex justify-between text-sm">
+                                        <div>
+                                            <p className="font-medium text-gray-800">{item.product_title}</p>
+                                            {item.variant_name && <p className="text-xs text-[var(--color-primary)]">{item.variant_name}</p>}
+                                            <p className="text-xs text-gray-500">{item.quantity} × Rp. {parseFloat(item.unit_price || 0).toLocaleString('id-ID')}</p>
+                                        </div>
+                                        <p className="font-medium text-gray-900 whitespace-nowrap ml-4">
+                                            Rp. {parseFloat(item.line_total || 0).toLocaleString('id-ID')}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Upload Bukti Bayar — only show if not yet approved */}
+                    {order.status === 'pending_payment' && proofStatus !== 'approved' && (
+                        <div className="border-t border-gray-100 pt-6 print:hidden">
+                            <h4 className="text-sm font-bold text-gray-900 mb-2">Upload Bukti Pembayaran</h4>
+                            <p className="text-xs text-gray-500 mb-4">Pastikan nominal transfer sesuai. Tim kami akan verifikasi max. 1×24 jam.</p>
+                            <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                id="paymentProofInvoice"
+                                className="hidden"
+                                onChange={(e) => handleUploadProof(e.target.files[0])}
+                            />
+                            <button
+                                onClick={() => document.getElementById('paymentProofInvoice').click()}
+                                disabled={uploadingProof}
+                                className="w-full flex items-center justify-center gap-2 border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition disabled:opacity-60"
+                            >
+                                {uploadingProof
+                                    ? <><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600" /> Mengunggah...</>
+                                    : <><Upload size={18} /> Pilih File Bukti Transfer</>
+                                }
+                            </button>
+                        </div>
+                    )}
 
                     <div className="text-center pt-4 flex flex-col md:flex-row justify-center items-center gap-4 print:hidden">
                         <button 

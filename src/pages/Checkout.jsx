@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
-import { db } from '../lib/firebase';
-import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { orderApi } from '../api/orderApi';
 import { TIER_CONFIG } from '../lib/tierUtils';
+import { getErrorMessage } from '../api/client';
 import Swal from 'sweetalert2';
 
 export default function Checkout() {
@@ -30,16 +30,15 @@ export default function Checkout() {
                 phone: userData.phone || prev.phone,
                 address: userData.address || prev.address,
                 city: userData.city || prev.city,
-                postalCode: userData.postalCode || prev.postalCode
+                postalCode: userData.postal_code || prev.postalCode
             }));
         }
     }, [userData]);
 
     const subtotal = getCartTotal();
     
-    // Tier Discount Logic
-    const tierData = TIER_CONFIG[userData?.tier] || TIER_CONFIG['bronze'];
-    const discountPercentage = userData ? tierData.discount : 0;
+    // Tier Discount Logic (just for frontend display, backend recalculates)
+    const discountPercentage = userData?.tier?.discount_percent || 0;
     const discountAmount = (subtotal * discountPercentage) / 100;
     
     const shipping = 20000;
@@ -67,7 +66,7 @@ export default function Checkout() {
     const handleCheckout = async (e) => {
         e.preventDefault();
 
-        // Starcenter Batch check
+        // Starcenter Batch check (frontend validation, backend also validates)
         if (userData?.role === 'starcenter' && total < 5000000) {
             Swal.fire({
                 title: 'Minimum Belanja Belum Tercapai',
@@ -81,41 +80,22 @@ export default function Checkout() {
         setLoading(true);
 
         try {
-            // Sanitize order data to remove undefined values (Firebase rejects undefined deeply nested in arrays)
-            const rawOrderData = {
-                customer: formData,
-                userId: currentUser?.uid || null,
-                items: cart,
-                subtotal,
-                discountPercentage,
-                discountAmount,
-                shipping,
-                total,
-                status: 'Menunggu Pembayaran'
-            };
-            
-            // JSON stringify trick strips out undefined keys completely
-            const sanitizedOrderData = JSON.parse(JSON.stringify(rawOrderData));
-            
-            const orderData = {
-                ...sanitizedOrderData,
-                createdAt: serverTimestamp()
-            };
+            const itemsData = cart.map(item => ({
+                product_id: item.id,
+                variant_id: item.variantId || null,
+                quantity: item.quantity
+            }));
 
-            const docRef = await addDoc(collection(db, "orders"), orderData);
-
-            // Update Last Transaction Date limit for downgrades (reset timer 30 hari)
-            if (currentUser) {
-                const userRef = doc(db, "users", currentUser.uid);
-                await updateDoc(userRef, {
-                    lastTransactionDate: serverTimestamp()
-                });
-            }
-
-            // Save to localStorage for tracking without login
-            const myOrders = JSON.parse(localStorage.getItem('my_orders') || '[]');
-            myOrders.push(docRef.id);
-            localStorage.setItem('my_orders', JSON.stringify(myOrders));
+            const response = await orderApi.checkout({
+                customer_info: {
+                    name: formData.name,
+                    phone: formData.phone,
+                    address: formData.address,
+                    city: formData.city,
+                    postal_code: formData.postalCode
+                },
+                items: itemsData
+            });
 
             clearCart();
 
@@ -127,14 +107,14 @@ export default function Checkout() {
                 timer: 2000,
                 showConfirmButton: false
             }).then(() => {
-                navigate(`/invoice/${docRef.id}`);
+                navigate(`/invoice/${response.order_number}`);
             });
 
         } catch (error) {
-            console.error("Error creating order:", error);
+            console.error('Error creating order:', error);
             Swal.fire({
                 title: 'Gagal!',
-                text: 'Terjadi kesalahan: ' + (error.message || error),
+                text: getErrorMessage(error, 'Terjadi kesalahan saat membuat pesanan.'),
                 icon: 'error',
                 confirmButtonColor: '#111827'
             });
@@ -232,7 +212,7 @@ export default function Checkout() {
                         {cart.map((item, idx) => (
                             <div key={idx} className="flex gap-4">
                                 <div className="w-16 h-16 rounded-sm bg-white overflow-hidden border border-gray-100 flex-shrink-0 relative">
-                                    <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                                    <img src={item.main_image || item.image} alt={item.title} className="w-full h-full object-cover" />
                                     <div className="absolute -top-2 -right-2 bg-gray-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold">
                                         {item.quantity}
                                     </div>

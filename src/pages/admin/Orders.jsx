@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../../lib/firebase';
-import { collection, getDocs, doc, updateDoc, orderBy, query } from 'firebase/firestore';
-import { Eye, Edit2, CheckCircle, XCircle, Search, Clock, Box, Rocket } from 'lucide-react';
+import { adminOrderApi } from '../../api/orderApi';
+import { adminApi } from '../../api/adminApi';
+import { Eye, Edit2, CheckCircle, XCircle, Search, Clock, Box, Rocket, Download, RefreshCw } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 export default function Orders() {
@@ -10,13 +10,40 @@ export default function Orders() {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [exporting, setExporting] = useState(false);
+
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            const data = await adminApi.exportOrders();
+            if (data.length === 0) {
+                Swal.fire('Info', 'Tidak ada data pesanan.', 'info');
+                return;
+            }
+            const headers = Object.keys(data[0]);
+            const csvRows = [];
+            csvRows.push(headers.join(','));
+            for (const row of data) {
+                csvRows.push(headers.map(h => `"${('' + row[h]).replace(/"/g, '\\"')}"`).join(','));
+            }
+            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `export_orders_${new Date().getTime()}.csv`);
+            a.click();
+        } catch (e) {
+            Swal.fire('Error', 'Gagal ekspor data pesanan.', 'error');
+        } finally {
+            setExporting(false);
+        }
+    };
 
     const fetchOrders = async () => {
         try {
             setLoading(true);
-            const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
-            const data = await getDocs(q);
-            setOrders(data.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            const data = await adminOrderApi.getOrders();
+            setOrders(data.data || data);
         } catch (error) {
             console.error("Error fetching orders:", error);
         } finally {
@@ -30,53 +57,16 @@ export default function Orders() {
 
     const handleUpdateStatus = async (orderId, newStatus) => {
         try {
-            const orderRef = doc(db, "orders", orderId);
-            const targetOrder = orders.find(o => o.id === orderId);
+            const targetOrder = orders.find(o => (o.id === orderId || o.order_number === orderId));
             const oldStatus = targetOrder.status;
 
             if (oldStatus !== newStatus) {
-                // Determine transaction value
-                const productSpend = (targetOrder.total || 0) - (targetOrder.shipping || 0);
-                
-                // If it's linked to a user account, update their cumulatives!
-                if (targetOrder.userId) {
-                    const { getDoc } = await import('firebase/firestore');
-                    const { getEligibleTier } = await import('../../lib/tierUtils');
-                    const userRef = doc(db, "users", targetOrder.userId);
-                    const userSnap = await getDoc(userRef);
-
-                    if (userSnap.exists()) {
-                        let userData = userSnap.data();
-                        let newCumulative = userData.cumulativeSpending || 0;
-
-                        if (newStatus === 'Selesai' && oldStatus !== 'Selesai') {
-                            // Add to cumulative
-                            newCumulative += productSpend;
-                        } else if (oldStatus === 'Selesai' && newStatus !== 'Selesai') {
-                            // Substract from cumulative (Refund logic)
-                            newCumulative = Math.max(0, newCumulative - productSpend);
-                        }
-
-                        // Re-evaluate tier
-                        let newTier = userData.tier;
-                        if (userData.role !== 'starcenter' && userData.role !== 'admin') {
-                            newTier = getEligibleTier(newCumulative);
-                        }
-
-                        // Save new user data
-                        await updateDoc(userRef, {
-                            cumulativeSpending: newCumulative,
-                            tier: newTier
-                        });
-                    }
-                }
+                await adminOrderApi.updateStatus(orderId, newStatus);
             }
 
-            await updateDoc(orderRef, { status: newStatus });
-
             // Update local state
-            setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-            if (selectedOrder && selectedOrder.id === orderId) {
+            setOrders(orders.map(o => (o.id === orderId || o.order_number === orderId) ? { ...o, status: newStatus } : o));
+            if (selectedOrder && (selectedOrder.id === orderId || selectedOrder.order_number === orderId)) {
                 setSelectedOrder({ ...selectedOrder, status: newStatus });
             }
 
@@ -120,10 +110,11 @@ export default function Orders() {
         setIsModalOpen(true);
     };
 
-    const filteredOrders = orders.filter(o =>
-        o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        o.customer?.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredOrders = orders.filter(o => {
+        const _id = o.order_number || o.id;
+        return String(_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
+               (o.customer_info?.name || o.customer?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+    });
 
     return (
         <div className="p-6">
@@ -133,15 +124,25 @@ export default function Orders() {
                     <p className="text-sm text-gray-500">Kelola pesanan dari customer</p>
                 </div>
 
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Cari ID Pesanan / Nama..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/20 focus:border-[var(--color-accent)] transition-all"
-                    />
+                <div className="flex items-center gap-3 relative">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Cari ID Pesanan / Nama..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/20 focus:border-[var(--color-accent)] transition-all"
+                        />
+                    </div>
+                    <button 
+                        onClick={handleExport}
+                        disabled={exporting}
+                        className="bg-gray-800 hover:bg-black text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition"
+                    >
+                        {exporting ? <RefreshCw size={16} className="animate-spin" /> : <Download size={16} />}
+                        Export
+                    </button>
                 </div>
             </div>
 
@@ -164,16 +165,19 @@ export default function Orders() {
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {filteredOrders.map((order) => {
-                                    const dateStr = order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Tanggal tidak tersedia';
+                                    const dateStr = order.created_at ? new Date(order.created_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Tanggal tidak tersedia';
+                                    const orderId = order.order_number || order.id;
+                                    const customer = order.customer_info || order.customer || {};
+
                                     return (
-                                        <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                                        <tr key={orderId} className="hover:bg-gray-50 transition-colors">
                                             <td className="p-4">
                                                 <div className="text-xs text-gray-400 mb-1">{dateStr}</div>
-                                                <div className="text-sm font-medium text-gray-900">#{order.id.slice(-6).toUpperCase()}</div>
+                                                <div className="text-sm font-medium text-gray-900">#{String(orderId).slice(-6).toUpperCase()}</div>
                                             </td>
                                             <td className="p-4">
-                                                <div className="text-sm font-medium text-gray-900">{order.customer?.name}</div>
-                                                <div className="text-xs text-gray-500">{order.customer?.city}</div>
+                                                <div className="text-sm font-medium text-gray-900">{customer.name}</div>
+                                                <div className="text-xs text-gray-500">{customer.city}</div>
                                             </td>
                                             <td className="p-4">
                                                 <span className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center w-max ${getStatusColor(order.status)}`}>
@@ -182,7 +186,7 @@ export default function Orders() {
                                                 </span>
                                             </td>
                                             <td className="p-4 text-sm font-bold text-gray-900">
-                                                Rp. {order.total?.toLocaleString('id-ID')}
+                                                Rp. {Number(order.total || 0).toLocaleString('id-ID')}
                                             </td>
                                             <td className="p-4 text-right">
                                                 <button
@@ -228,7 +232,7 @@ export default function Orders() {
                                     {['Menunggu Pembayaran', 'Pesanan Diproses', 'Dikirim', 'Selesai', 'Ditolak'].map(status => (
                                         <button
                                             key={status}
-                                            onClick={() => handleUpdateStatus(selectedOrder.id, status)}
+                                            onClick={() => handleUpdateStatus(selectedOrder.id || selectedOrder.order_number, status)}
                                             className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors border ${selectedOrder.status === status ? getStatusColor(status) : 'border-gray-300 text-gray-600 hover:bg-gray-100'}`}
                                         >
                                             {status}
@@ -242,10 +246,10 @@ export default function Orders() {
                                 <div>
                                     <h3 className="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-2 mb-3">Informasi Customer</h3>
                                     <div className="text-sm space-y-2 text-gray-600">
-                                        <p><span className="font-medium text-gray-900">Nama:</span> {selectedOrder.customer?.name}</p>
-                                        <p><span className="font-medium text-gray-900">Telepon:</span> {selectedOrder.customer?.phone}</p>
-                                        <p><span className="font-medium text-gray-900">Alamat:</span><br />{selectedOrder.customer?.address}</p>
-                                        <p>{selectedOrder.customer?.city}, {selectedOrder.customer?.postalCode}</p>
+                                        <p><span className="font-medium text-gray-900">Nama:</span> {(selectedOrder.customer_info || selectedOrder.customer)?.name}</p>
+                                        <p><span className="font-medium text-gray-900">Telepon:</span> {(selectedOrder.customer_info || selectedOrder.customer)?.phone}</p>
+                                        <p><span className="font-medium text-gray-900">Alamat:</span><br />{(selectedOrder.customer_info || selectedOrder.customer)?.address}</p>
+                                        <p>{(selectedOrder.customer_info || selectedOrder.customer)?.city}, {(selectedOrder.customer_info || selectedOrder.customer)?.postal_code || (selectedOrder.customer_info || selectedOrder.customer)?.postalCode}</p>
                                     </div>
                                 </div>
 
@@ -255,15 +259,15 @@ export default function Orders() {
                                     <div className="space-y-2 text-sm text-gray-600">
                                         <div className="flex justify-between">
                                             <span>Subtotal</span>
-                                            <span>Rp. {selectedOrder.subtotal?.toLocaleString('id-ID')}</span>
+                                            <span>Rp. {Number(selectedOrder.subtotal || 0).toLocaleString('id-ID')}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span>Ongkos Kirim</span>
-                                            <span>Rp. {selectedOrder.shipping?.toLocaleString('id-ID')}</span>
+                                            <span>Rp. {Number(selectedOrder.shipping_fee || selectedOrder.shipping || 0).toLocaleString('id-ID')}</span>
                                         </div>
                                         <div className="flex justify-between pt-2 border-t border-gray-200 font-bold text-gray-900 text-base">
                                             <span>Total</span>
-                                            <span>Rp. {selectedOrder.total?.toLocaleString('id-ID')}</span>
+                                            <span>Rp. {Number(selectedOrder.total || 0).toLocaleString('id-ID')}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -276,17 +280,17 @@ export default function Orders() {
                                     {selectedOrder.items?.map((item, idx) => (
                                         <div key={idx} className="flex gap-4 items-center border border-gray-100 rounded-lg p-3 bg-white">
                                             <div className="w-16 h-16 bg-gray-100 rounded border border-gray-200 overflow-hidden flex-shrink-0">
-                                                <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                                                <img src={item.product?.main_image || item.image || '/logo.png'} alt={item.product?.title || item.title} className="w-full h-full object-cover" />
                                             </div>
                                             <div className="flex-1">
-                                                <h4 className="text-sm font-bold text-gray-900">{item.title}</h4>
-                                                {item.variantName && <p className="text-xs font-medium text-[var(--color-primary)] mb-1">{item.variantName}</p>}
-                                                <p className="text-xs text-gray-500">{item.category}</p>
+                                                <h4 className="text-sm font-bold text-gray-900">{item.product?.title || item.title}</h4>
+                                                {item.variant?.name && <p className="text-xs font-medium text-[var(--color-primary)] mb-1">{item.variant.name}</p>}
+                                                <p className="text-xs text-gray-500">{item.product?.category || item.category}</p>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-sm text-gray-500">{item.quantity}x @ Rp. {item.price}</p>
+                                                <p className="text-sm text-gray-500">{item.quantity}x @ Rp. {Number(item.price).toLocaleString('id-ID')}</p>
                                                 <p className="text-sm font-bold text-gray-900 mt-1">
-                                                    Rp. {(parseFloat(String(item.price || 0).replace(/,/g, '')) * item.quantity).toLocaleString('id-ID')}
+                                                    Rp. {(Number(item.price) * item.quantity).toLocaleString('id-ID')}
                                                 </p>
                                             </div>
                                         </div>

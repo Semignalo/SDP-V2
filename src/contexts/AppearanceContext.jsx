@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { db } from '../lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { settingsApi } from '../api/settingsApi';
 
 const AppearanceContext = createContext();
 
@@ -23,35 +22,23 @@ export function AppearanceProvider({ children }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Real-time subscription to appearance settings
-        if (!db) {
-            console.warn("Firebase DB not initialized, skipping real-time updates.");
-            setLoading(false);
-            return;
-        }
-
-        try {
-            const unsubscribe = onSnapshot(doc(db, "settings", "appearance"), (doc) => {
-                if (doc.exists()) {
-                    const data = doc.data();
-                    setSettings(prev => ({ ...prev, ...data }));
-
-                    // Update CSS variable dynamically
-                    if (data.accentColor) {
-                        document.documentElement.style.setProperty('--color-accent', data.accentColor);
-                    }
+        const fetchSettings = async () => {
+            try {
+                const data = await settingsApi.getAppearance();
+                setSettings(prev => ({ ...prev, ...data }));
+                
+                // Update CSS variable dynamically
+                if (data.accentColor) {
+                    document.documentElement.style.setProperty('--color-accent', data.accentColor);
                 }
+            } catch (err) {
+                console.error("Failed to fetch appearance settings:", err);
+            } finally {
                 setLoading(false);
-            }, (error) => {
-                console.error("Failed to fetch settings:", error);
-                setLoading(false);
-            });
+            }
+        };
 
-            return () => unsubscribe();
-        } catch (err) {
-            console.error("Critical error in AppearanceContext:", err);
-            setLoading(false);
-        }
+        fetchSettings();
     }, []);
 
     return (

@@ -8,16 +8,29 @@ import {
     Settings,
     CreditCard,
     LogOut,
-    ArrowLeft
+    ArrowLeft,
+    Banknote,
+    Crown
 } from 'lucide-react';
 import { cn } from '../lib/utils'; // Adjust path if needed
+import { useAuth } from '../contexts/AuthContext';
+import { Navigate } from 'react-router-dom';
 
 export default function AdminLayout() {
+    const { currentUser, userRole, logout } = useAuth();
+    
+    // Redirect if not admin
+    if (!currentUser || userRole !== 'admin') {
+        return <Navigate to="/login" replace />;
+    }
+
     const sidebarLinks = [
         { name: 'Dashboard', path: '/admin', icon: LayoutDashboard, end: true },
         { name: 'Pesanan', path: '/admin/orders', icon: ShoppingCart },
         { name: 'Produk', path: '/admin/products', icon: Package },
         { name: 'Users / Center', path: '/admin/users', icon: Users },
+        { name: 'Komisi', path: '/admin/commissions', icon: Banknote },
+        { name: 'Level / Tiers', path: '/admin/tiers', icon: Crown },
         { name: 'Rekening Pembayaran', path: '/admin/payment-settings', icon: CreditCard },
         { name: 'Tampilan Web', path: '/admin/settings', icon: Settings },
     ];
@@ -54,7 +67,7 @@ export default function AdminLayout() {
                         <ArrowLeft size={20} />
                         Back to App
                     </NavLink>
-                    <button className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-900/10 rounded-lg transition-colors">
+                    <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-900/10 rounded-lg transition-colors">
                         <LogOut size={20} />
                         Logout
                     </button>

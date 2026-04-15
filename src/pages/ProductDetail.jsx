@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { db } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { productApi } from '../api/productApi';
 import { Star, Truck, ShieldCheck, Leaf, Info } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 
@@ -17,18 +16,12 @@ export default function ProductDetail() {
         const fetchProduct = async () => {
             try {
                 if (!id) return;
-                const docRef = doc(db, "products", id);
-                const docSnap = await getDoc(docRef);
-
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    setProduct({ id: docSnap.id, ...data });
-                    setMainImage(data.image);
-                    if (data.variants && data.variants.length > 0) {
-                        setSelectedVariant(data.variants[0]);
-                    }
-                } else {
-                    console.log("No such product!");
+                
+                const data = await productApi.getProduct(id);
+                setProduct(data);
+                setMainImage(data.main_image); // Use main_image from DB
+                if (data.variants && data.variants.length > 0) {
+                    setSelectedVariant(data.variants[0]);
                 }
             } catch (error) {
                 console.error("Error fetching product:", error);
@@ -200,9 +193,10 @@ export default function ProductDetail() {
                             onClick={() => {
                                 const productToAdd = {
                                     ...product,
-                                    cartItemId: selectedVariant ? `${product.id}-${selectedVariant.name}` : product.id,
+                                    cartItemId: selectedVariant ? `${product.id}-${selectedVariant.id}` : product.id,
                                     price: selectedVariant ? selectedVariant.price : product.price,
-                                    variantName: selectedVariant ? selectedVariant.name : undefined
+                                    variantName: selectedVariant ? selectedVariant.name : undefined,
+                                    variantId: selectedVariant ? selectedVariant.id : undefined
                                 };
                                 addToCart(productToAdd);
                             }}

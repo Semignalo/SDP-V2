@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAppearance } from '../contexts/AppearanceContext';
-import { db } from '../lib/firebase';
-import { collection, getDocs, limit, query } from 'firebase/firestore';
+import { productApi } from '../api/productApi';
 import { ArrowRight, Star } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 
@@ -13,15 +12,9 @@ export default function Home() {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                // Fetch products from Firestore
-                const q = query(collection(db, "products"));
-                const querySnapshot = await getDocs(q);
-                const productsData = querySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-
-                setAllProducts(productsData || []);
+                // Fetch products from API
+                const result = await productApi.getProducts({ per_page: 8 });
+                setAllProducts(result.data || []);
             } catch (error) {
                 console.error("Error fetching products:", error);
             }

@@ -1,68 +1,129 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { db } from '../../lib/firebase';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { Package, ExternalLink, Printer } from 'lucide-react';
+import { orderApi } from '../../api/orderApi';
+import { Package, ExternalLink, Printer, Upload, CheckCircle, Clock, Truck, XCircle, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import Swal from 'sweetalert2';
+import { getErrorMessage } from '../../api/client';
+
+// ── Status mapping: backend → display (bahasa Indonesia) ──
+const STATUS_MAP = {
+    pending_payment: { label: 'Menunggu Pembayaran', color: 'bg-yellow-100 text-yellow-800 border-yellow-300', icon: Clock },
+    processing:      { label: 'Pesanan Diproses',    color: 'bg-blue-100 text-blue-800 border-blue-300',   icon: Package },
+    shipped:         { label: 'Dalam Pengiriman',    color: 'bg-orange-100 text-orange-800 border-orange-300', icon: Truck },
+    completed:       { label: 'Selesai',             color: 'bg-emerald-100 text-emerald-800 border-emerald-300', icon: CheckCircle },
+    rejected:        { label: 'Ditolak',             color: 'bg-red-100 text-red-800 border-red-300',     icon: XCircle },
+};
+
+// Steps for the tracking progress bar (in order)
+const STEPS = ['pending_payment', 'processing', 'shipped', 'completed'];
+
+function StatusBadge({ status }) {
+    const cfg = STATUS_MAP[status] || { label: status, color: 'bg-gray-100 text-gray-700 border-gray-300', icon: AlertCircle };
+    const Icon = cfg.icon;
+    return (
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide border ${cfg.color}`}>
+            <Icon size={12} />
+            {cfg.label}
+        </span>
+    );
+}
+
+function TrackingBar({ status }) {
+    const isRejected = status === 'rejected';
+    const currentIdx = STEPS.indexOf(status);
+
+    return (
+        <div className="relative py-4 hidden md:block">
+            {/* Line */}
+            <div className="absolute top-1/2 left-5 right-5 h-0.5 bg-gray-100 -translate-y-1/2 z-0" />
+            <div className="relative z-10 flex justify-between px-2">
+                {STEPS.map((step, idx) => {
+                    const isPast = !isRejected && currentIdx >= idx;
+                    const isActive = !isRejected && currentIdx === idx;
+                    const cfg = STATUS_MAP[step];
+
+                    return (
+                        <div key={step} className="flex flex-col items-center gap-1.5">
+                            <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all duration-300
+                                ${isRejected ? 'bg-gray-50 border-gray-200 text-gray-300' :
+                                  isActive ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white scale-110 shadow-lg shadow-primary/20' :
+                                  isPast ? 'bg-gray-800 border-gray-800 text-white' :
+                                  'bg-white border-gray-200 text-gray-300'}`}>
+                                <span className="w-2 h-2 rounded-full bg-current" />
+                            </div>
+                            <span className={`text-[9px] uppercase tracking-wide font-bold leading-tight text-center max-w-[64px]
+                                ${isActive ? 'text-[var(--color-primary)]' : isPast && !isRejected ? 'text-gray-700' : 'text-gray-400'}`}>
+                                {cfg.label}
+                            </span>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
 
 export default function ProfileOrders() {
     const { currentUser } = useAuth();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [uploadingId, setUploadingId] = useState(null);
 
     useEffect(() => {
         const fetchMyOrders = async () => {
             if (!currentUser) return;
             try {
-                // Fetch logged-in user's orders
-                const q = query(
-                    collection(db, "orders"),
-                    where("userId", "==", currentUser.uid)
-                );
-                
-                const snap = await getDocs(q);
-                let fetched = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
-                // Sort by date descending natively in JS because firestore requires composite index for query+orderby
-                fetched.sort((a, b) => {
-                    const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
-                    const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
-                    return timeB - timeA;
-                });
-                
-                setOrders(fetched);
+                const resp = await orderApi.getMyOrders();
+                setOrders(resp.data || []);
             } catch (error) {
-                console.error("Gagal menarik data pesanan:", error);
+                console.error('Gagal menarik data pesanan:', error);
             } finally {
                 setLoading(false);
             }
         };
-
         fetchMyOrders();
     }, [currentUser]);
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'Menunggu Pembayaran': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-            case 'Pesanan Diproses': return 'bg-blue-100 text-blue-800 border-blue-200';
-            case 'Dalam Pengiriman': return 'bg-orange-100 text-orange-800 border-orange-200';
-            case 'Selesai': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-            case 'Ditolak': return 'bg-red-100 text-red-800 border-red-200';
-            default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    const handleUploadProof = async (orderId, file) => {
+        if (!file) return;
+        setUploadingId(orderId);
+        try {
+            await orderApi.uploadPaymentProof(orderId, file);
+            Swal.fire({ icon: 'success', title: 'Berhasil!', text: 'Bukti pembayaran berhasil diunggah dan sedang diverifikasi.', timer: 2000, showConfirmButton: false });
+        } catch (err) {
+            Swal.fire('Gagal', getErrorMessage(err), 'error');
+        } finally {
+            setUploadingId(null);
         }
     };
 
-    if (loading) return <div className="text-center py-10 text-gray-500">Memuat riwayat pesanan...</div>;
+    // ── Loading skeleton ──
+    if (loading) {
+        return (
+            <div className="space-y-4">
+                {[1, 2, 3].map(i => (
+                    <div key={i} className="bg-white rounded-3xl p-6 border border-gray-100 animate-pulse">
+                        <div className="flex justify-between mb-4">
+                            <div className="h-4 w-36 bg-gray-100 rounded" />
+                            <div className="h-4 w-24 bg-gray-100 rounded-full" />
+                        </div>
+                        <div className="h-16 w-full bg-gray-50 rounded-xl" />
+                    </div>
+                ))}
+            </div>
+        );
+    }
 
     if (orders.length === 0) {
         return (
             <div className="bg-white rounded-3xl p-12 shadow-sm border border-gray-100 text-center flex flex-col items-center">
-                <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6">
-                    <Package size={48} className="text-gray-300" />
+                <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-5">
+                    <Package size={40} className="text-gray-300" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Belum ada pesanan</h3>
-                <p className="text-gray-500 mb-6">Kamu belum pernah melakukan transaksi apa pun. Yuk mulai belanja sekarang!</p>
-                <Link to="/products" className="bg-primary text-white px-8 py-3 rounded-xl font-medium shadow-md shadow-gray-200 hover:bg-gray-800 transition">
+                <p className="text-gray-500 mb-6 text-sm">Kamu belum pernah melakukan transaksi. Yuk mulai belanja sekarang!</p>
+                <Link to="/products" className="bg-gray-900 text-white px-8 py-3 rounded-xl font-medium hover:bg-gray-800 transition shadow-md">
                     Belanja Sekarang
                 </Link>
             </div>
@@ -71,96 +132,124 @@ export default function ProfileOrders() {
 
     return (
         <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2 mb-2">
-                <Package className="text-primary" /> Riwayat & Progress Pesanan
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <Package className="text-[var(--color-primary)]" /> Riwayat Pesanan
             </h2>
-            
-            <div className="flex flex-col gap-6">
+
+            <div className="flex flex-col gap-5">
                 {orders.map((order) => {
-                    const dateStr = order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString('id-ID', {
-                        day: 'numeric', month: 'long', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit'
-                    }) : '-';
-                    
+                    const dateStr = order.created_at
+                        ? new Date(order.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                        : '-';
+
+                    const canUploadProof = order.status === 'pending_payment';
+
                     return (
                         <div key={order.id} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition">
-                            <div className="flex flex-col md:flex-row justify-between md:items-center border-b border-gray-100 pb-4 mb-4 gap-4">
+
+                            {/* Order Header */}
+                            <div className="flex flex-col md:flex-row justify-between md:items-center border-b border-gray-100 pb-4 mb-4 gap-3">
                                 <div>
-                                    <div className="text-xs text-gray-500 font-mono tracking-wider mb-1">
-                                        ORDER ID: {order.id.toUpperCase()}
+                                    <div className="text-xs text-gray-400 font-mono tracking-widest mb-0.5 uppercase">
+                                        #{order.order_number}
                                     </div>
-                                    <div className="text-sm font-semibold text-gray-900">{dateStr}</div>
+                                    <div className="text-sm font-semibold text-gray-700">{dateStr}</div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${getStatusColor(order.status)}`}>
-                                        {order.status || 'Menunggu Pembayaran'}
-                                    </span>
-                                </div>
+                                <StatusBadge status={order.status} />
                             </div>
 
-                            {/* Tracking Progress Bar */}
-                            <div className="mb-6 relative hidden md:block px-4 pt-2">
-                                <div className="absolute top-1/2 left-4 right-4 h-1 -translate-y-1/2 bg-gray-100 z-0"></div>
-                                <div className="relative z-10 flex justify-between">
-                                    {['Menunggu Pembayaran', 'Pesanan Diproses', 'Dalam Pengiriman', 'Selesai'].map((step, idx) => {
-                                        const statusOrder = ['Menunggu Pembayaran', 'Pesanan Diproses', 'Dalam Pengiriman', 'Selesai'];
-                                        const currentIndex = statusOrder.indexOf(order.status);
-                                        const isPast = currentIndex >= idx;
-                                        const isActive = currentIndex === idx;
-                                        const isRejected = order.status === 'Ditolak';
-                                        
-                                        // Override styles if rejected
-                                        const stepClass = isRejected ? 'bg-red-100 border-red-300 text-red-500' :
-                                                          isActive ? 'bg-primary border-primary text-white scale-110 shadow-lg' : 
-                                                          isPast ? 'bg-gray-800 border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-400';
-                                                          
+                            {/* Tracking Bar */}
+                            <TrackingBar status={order.status} />
+
+                            {/* Items + Summary */}
+                            <div className="flex flex-col md:flex-row gap-5 bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+
+                                {/* Items list */}
+                                <div className="flex-1 space-y-3">
+                                    {order.items?.map((item, idx) => {
+                                        // Backend now returns main_image_url (accessor) or fallback to storage path
+                                        const imageUrl = item.product?.main_image_url
+                                            || (item.product?.main_image
+                                                ? `${import.meta.env.VITE_STORAGE_URL || 'http://localhost:8000/storage'}/${item.product.main_image}`
+                                                : '/logo.png');
+
                                         return (
-                                            <div key={step} className="flex flex-col items-center gap-2 group">
-                                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${stepClass}`}>
-                                                    {isPast && !isRejected && <span className="w-2 h-2 rounded-full bg-white"></span>}
+                                            <div key={idx} className="flex items-center gap-3">
+                                                <div className="w-14 h-14 bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm flex-shrink-0">
+                                                    <img src={imageUrl} alt={item.product_title} className="w-full h-full object-cover" />
                                                 </div>
-                                                <span className={`text-[10px] uppercase tracking-wide font-bold transition-colors ${isActive ? 'text-primary' : isPast && !isRejected ? 'text-gray-800' : 'text-gray-400'}`}>
-                                                    {step}
-                                                </span>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-gray-900 truncate">{item.product_title}</p>
+                                                    {item.variant_name && <p className="text-xs text-[var(--color-primary)]">{item.variant_name}</p>}
+                                                    <p className="text-xs text-gray-500 mt-0.5">
+                                                        {item.quantity} × Rp. {parseFloat(item.unit_price || 0).toLocaleString('id-ID')}
+                                                    </p>
+                                                </div>
                                             </div>
-                                        )
+                                        );
                                     })}
                                 </div>
-                            </div>
 
-                            <div className="flex flex-col md:flex-row gap-6 bg-gray-50/50 p-4 rounded-2xl border border-gray-50">
-                                <div className="flex-1 space-y-4">
-                                    {order.items?.map((item, idx) => (
-                                        <div key={idx} className="flex items-center gap-4">
-                                            <div className="w-16 h-16 bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm flex-shrink-0">
-                                                <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-bold text-gray-900 truncate">{item.title}</p>
-                                                {item.variantName && <p className="text-xs text-primary">{item.variantName}</p>}
-                                                <p className="text-xs text-gray-500 mt-1">{item.quantity} x Rp. {parseFloat(String(item.price||0).replace(/,/g,'')).toLocaleString('id-ID')}</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="border-t md:border-t-0 md:border-l border-gray-200 pt-4 md:pt-0 md:pl-6 flex flex-col justify-between min-w-[200px]">
+                                {/* Order Summary & Actions */}
+                                <div className="border-t md:border-t-0 md:border-l border-gray-200 pt-4 md:pt-0 md:pl-5 flex flex-col justify-between min-w-[190px]">
                                     <div>
-                                        <div className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Total Tagihan</div>
-                                        <div className="text-xl font-bold text-gray-900 mb-2">Rp. {(order.total || 0).toLocaleString('id-ID')}</div>
+                                        {order.discount_amount > 0 && (
+                                            <div className="text-xs text-gray-500 mb-1 flex justify-between">
+                                                <span>Subtotal</span>
+                                                <span>Rp. {parseFloat(order.subtotal || 0).toLocaleString('id-ID')}</span>
+                                            </div>
+                                        )}
+                                        {order.discount_amount > 0 && (
+                                            <div className="text-xs text-[var(--color-primary)] font-medium mb-1 flex justify-between">
+                                                <span>Diskon Tier</span>
+                                                <span>- Rp. {parseFloat(order.discount_amount || 0).toLocaleString('id-ID')}</span>
+                                            </div>
+                                        )}
+                                        <div className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Total Tagihan</div>
+                                        <div className="text-xl font-bold text-gray-900 mb-3">
+                                            Rp. {parseFloat(order.total || 0).toLocaleString('id-ID')}
+                                        </div>
                                     </div>
-                                    
-                                    <div className="flex flex-col gap-2 mt-4">
-                                        <Link to={`/invoice/${order.id}`} className="text-xs font-bold flex justify-center items-center gap-1 w-full bg-white border border-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-50 transition">
-                                            <ExternalLink size={14} /> Lihat Detail
+
+                                    {/* Action Buttons */}
+                                    <div className="flex flex-col gap-2">
+                                        <Link
+                                            to={`/invoice/${order.order_number}`}
+                                            className="text-xs font-bold flex justify-center items-center gap-1.5 w-full bg-white border border-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-50 transition"
+                                        >
+                                            <ExternalLink size={13} /> Lihat Invoice
                                         </Link>
-                                        
-                                        {/* Download Invoice Button for completed orders */}
-                                        {order.status === 'Selesai' && (
-                                            <button 
-                                                onClick={() => window.open(`/invoice/${order.id}?print=true`, '_blank')}
-                                                className="text-xs font-bold flex justify-center items-center gap-1 w-full bg-primary text-white shadow-sm border border-primary py-2 rounded-lg hover:bg-gray-800 transition"
+
+                                        {/* Upload Bukti Bayar — only for pending_payment */}
+                                        {canUploadProof && (
+                                            <>
+                                                <input
+                                                    type="file"
+                                                    accept="image/jpeg,image/png,image/webp"
+                                                    id={`proof-${order.id}`}
+                                                    className="hidden"
+                                                    onChange={(e) => handleUploadProof(order.id, e.target.files[0])}
+                                                />
+                                                <button
+                                                    onClick={() => document.getElementById(`proof-${order.id}`).click()}
+                                                    disabled={uploadingId === order.id}
+                                                    className="text-xs font-bold flex justify-center items-center gap-1.5 w-full bg-yellow-50 border border-yellow-300 text-yellow-800 py-2 rounded-lg hover:bg-yellow-100 transition disabled:opacity-60"
+                                                >
+                                                    {uploadingId === order.id
+                                                        ? <><span className="animate-spin rounded-full h-3 w-3 border-b-2 border-yellow-700" /> Mengunggah...</>
+                                                        : <><Upload size={13} /> Upload Bukti Bayar</>
+                                                    }
+                                                </button>
+                                            </>
+                                        )}
+
+                                        {/* Download Invoice — only for completed orders */}
+                                        {order.status === 'completed' && (
+                                            <button
+                                                onClick={() => window.open(`/invoice/${order.order_number}?print=true`, '_blank')}
+                                                className="text-xs font-bold flex justify-center items-center gap-1.5 w-full bg-gray-900 text-white border border-gray-900 py-2 rounded-lg hover:bg-gray-800 transition"
                                             >
-                                                <Printer size={14} /> Cetak/Download Invoice
+                                                <Printer size={13} /> Cetak / Download
                                             </button>
                                         )}
                                     </div>

@@ -2,10 +2,15 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
-export default function ProductCard({ id, title, price, originalPrice, discount, image, category = "The Act", variants = [] }) {
+export default function ProductCard({ id, title, price, originalPrice, discount, image, main_image, main_image_url, category = "The Act", variants = [] }) {
+    // Parse numeric price (backend returns decimal string, e.g. "150000.00")
+    const parsePrice = (p) => parseFloat(String(p || '0').replace(/[^0-9.]/g, '')) || 0;
     const displayPrice = variants && variants.length > 0
-        ? `Mulai dari Rp. ${Math.min(...variants.map(v => parseInt(v.price.replace(/[.,]/g, '')) || 0)).toLocaleString('id-ID')}`
-        : `Rp. ${price}`;
+        ? `Mulai dari Rp. ${Math.min(...variants.map(v => parsePrice(v.price))).toLocaleString('id-ID')}`
+        : `Rp. ${parsePrice(price).toLocaleString('id-ID')}`;
+
+    // Image: prefer accessor url, fallback to raw path, then legacy image prop
+    const imageUrl = main_image_url || main_image || image;
     return (
         <Link to={`/product/${id}`} className="group cursor-pointer block">
             {/* Image Container */}
@@ -16,9 +21,10 @@ export default function ProductCard({ id, title, price, originalPrice, discount,
                     </div>
                 )}
                 <img
-                    src={image}
+                    src={imageUrl || '/logo.png'}
                     alt={title}
                     className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
+                    onError={(e) => { e.target.src = '/logo.png'; }}
                 />
                 {/* Dots placeholder for slider indicator */}
                 <div className="absolute bottom-4 left-4 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
