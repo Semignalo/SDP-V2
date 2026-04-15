@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat c:/laragon/www/SDP-V2/starinc-api/app/Console/Commands/*.php)",
+      "Bash(wc -l c:/laragon/www/SDP-V2/src/pages/*.jsx c:/laragon/www/SDP-V2/src/pages/admin/*.jsx)",
+      "Bash(git -C c:/laragon/www/SDP-V2 log --oneline)",
+      "Bash(git -C c:/laragon/www/SDP-V2 diff --stat HEAD~1 HEAD)"
+    ]
+  }
+}
