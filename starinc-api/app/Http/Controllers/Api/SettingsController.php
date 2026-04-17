@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UploadAdminFileRequest;
 use App\Models\AppearanceSetting;
 use App\Models\SystemSetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class SettingsController extends Controller
 {
@@ -28,6 +30,17 @@ class SettingsController extends Controller
             'bank_name'      => SystemSetting::getValue('payment_bank_name', 'BCA'),
             'account_number' => SystemSetting::getValue('payment_account_number', '888888888'),
             'account_name'   => SystemSetting::getValue('payment_account_name', 'PT BBK'),
+        ]);
+    }
+
+    /**
+     * Get system settings (authenticated users).
+     * Returns MOQ threshold and other general settings for Starcenter/MLM flow.
+     */
+    public function systemSettings()
+    {
+        return response()->json([
+            'moq_threshold' => (int) SystemSetting::getValue('moq_threshold', 5000000),
         ]);
     }
 
@@ -90,6 +103,32 @@ class SettingsController extends Controller
         }
 
         return response()->json(['message' => 'Tampilan berhasil diperbarui.']);
+    }
+
+    /**
+     * Upload a media file (video/image) for use in Appearance settings.
+     *
+     * Accepts multipart/form-data with:
+     *   - file   : required, image or video (jpg/png/gif/webp/mp4/webm/mov), max 50MB
+     *   - folder : optional, subdirectory name inside uploads/ (e.g. "hero", "banners")
+     *
+     * Returns { url: string } — a publicly accessible URL to the stored file.
+     */
+    public function upload(UploadAdminFileRequest $request)
+    {
+        $folder = $request->input('folder', 'uploads');
+        // Sanitise: strip leading/trailing slashes, collapse any double-slashes
+        $folder = trim(preg_replace('#/+#', '/', $folder), '/');
+        $storagePath = 'public/'.$folder;
+
+        $path = $request->file('file')->store($storagePath);
+
+        // Convert storage path to a publicly accessible URL
+        // storage_path stores as public/uploads/…, public URL is /storage/uploads/…
+        $relativePath = str_replace('public/', '', $path);
+        $url = Storage::url($relativePath);
+
+        return response()->json(['url' => $url]);
     }
 
     /**

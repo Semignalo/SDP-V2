@@ -41,7 +41,7 @@ export default function AdminTiers() {
                 timer: 1500,
                 showConfirmButton: false
             });
-        } catch (e) {
+        } catch {
             Swal.fire('Error', 'Gagal menyimpan konfigurasi.', 'error');
         }
     }

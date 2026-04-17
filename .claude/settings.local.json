@@ -4,7 +4,26 @@
       "Bash(cat c:/laragon/www/SDP-V2/starinc-api/app/Console/Commands/*.php)",
       "Bash(wc -l c:/laragon/www/SDP-V2/src/pages/*.jsx c:/laragon/www/SDP-V2/src/pages/admin/*.jsx)",
       "Bash(git -C c:/laragon/www/SDP-V2 log --oneline)",
-      "Bash(git -C c:/laragon/www/SDP-V2 diff --stat HEAD~1 HEAD)"
+      "Bash(git -C c:/laragon/www/SDP-V2 diff --stat HEAD~1 HEAD)",
+      "Bash(php artisan *)",
+      "Read(//usr/**)",
+      "Read(//usr/local/**)",
+      "Read(//c/laragon/bin/php//**)",
+      "Bash(/c/laragon/bin/php/php-8.3.30-Win32-vs16-x64/php.exe artisan *)",
+      "Bash(/c/laragon/bin/php/php-8.3.30-Win32-vs16-x64/php.exe vendor/bin/pint app/Http/Controllers/Api/NetworkController.php app/Http/Controllers/Api/CommissionController.php app/Http/Controllers/Api/OrderController.php app/Http/Requests/CheckoutRequest.php routes/api.php routes/console.php)",
+      "Bash(/c/laragon/bin/php/php8.3.14/php artisan *)",
+      "Read(//c/laragon/**)",
+      "Bash(/c/laragon/bin/php/php-8.3.30-Win32-vs16-x64/php.exe vendor/bin/pint app/Models/SystemSetting.php app/Services/OrderService.php app/Services/TierService.php app/Http/Controllers/Api/OrderController.php app/Http/Requests/UploadPaymentProofRequest.php)",
+      "Bash(/c/laragon/bin/php/php-8.3.30-Win32-vs16-x64/php.exe vendor/bin/pint database/migrations/2026_04_16_000001_add_performance_indexes.php database/migrations/2026_04_16_000002_add_stock_to_products_table.php)",
+      "Bash(node -e ' *)",
+      "Bash(npm run *)",
+      "Bash(ls /c/laragon/www/SDP-V2/*.config.*)",
+      "Bash(/c/laragon/bin/php/php8.4.5/php.exe artisan *)",
+      "Bash(ls /c/laragon/www/SDP-V2/*.eslint*)",
+      "Bash(ls /c/laragon/www/SDP-V2/eslint*)",
+      "Bash(npx eslint *)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(git add *)"
     ]
   }
 }

@@ -10,5 +10,16 @@ export default defineConfig({
   ],
   server: {
     host: true
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          charts: ['recharts'],
+          ui: ['sweetalert2', 'lucide-react'],
+        }
+      }
+    }
   }
 })

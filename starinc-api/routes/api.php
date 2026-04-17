@@ -2,9 +2,13 @@
 
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CommissionController;
+use App\Http\Controllers\Api\NetworkController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\SettingsController;
+use App\Http\Middleware\EnsureIsAdmin;
+use App\Models\Tier;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -13,8 +17,10 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::middleware('throttle:5,1')->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+});
 
 // Products (public)
 Route::get('/products', [ProductController::class, 'index']);
@@ -29,7 +35,7 @@ Route::get('/orders/{orderNumber}/invoice', [OrderController::class, 'invoice'])
 
 // Tiers list (public)
 Route::get('/tiers', function () {
-    return response()->json(\App\Models\Tier::orderBy('sort_order')->get());
+    return response()->json(Tier::orderBy('sort_order')->get());
 });
 
 /*
@@ -52,63 +58,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders/{id}/payment-proof', [OrderController::class, 'uploadPaymentProof']);
 
     // Commissions (my commissions)
-    Route::get('/user/commissions', function (\Illuminate\Http\Request $request) {
-        return response()->json(
-            $request->user()->commissions()
-                ->with(['order', 'sourceUser'])
-                ->orderBy('created_at', 'desc')
-                ->paginate(20)
-        );
-    });
+    Route::get('/user/commissions', [CommissionController::class, 'myCommissions']);
 
-    // Referral info
-    Route::get('/user/referral-link', function (\Illuminate\Http\Request $request) {
-        $user = $request->user();
-        
-        if ($user->role === 'starcenter' || $user->role === 'admin') {
-            // Get all downlines up to 7 levels
-            $network = \App\Models\StarcenterNetwork::where('upline_id', $user->id)
-                ->with(['downline.tier'])
-                ->orderBy('depth', 'asc')
-                ->get();
-                
-            $referrals = $network->map(function ($net) {
-                return [
-                    'id'                  => $net->downline->id,
-                    'name'                => $net->downline->name,
-                    'email'               => $net->downline->email,
-                    'referrer_id'         => $net->downline->referrer_id,
-                    'tier'                => $net->downline->tier,
-                    'created_at'          => $net->downline->created_at,
-                    'cumulative_spending' => $net->downline->cumulative_spending,
-                    'level'               => $net->depth,
-                ];
-            });
-        } else {
-            // Regular user: only direct referrals (Level 1)
-            $referrals = $user->referrals()->with('tier')
-                ->select('id', 'name', 'email', 'referrer_id', 'tier_id', 'created_at', 'cumulative_spending')
-                ->orderBy('created_at', 'desc')->get()
-                ->map(function ($ref) {
-                    $ref->level = 1;
-                    return $ref;
-                });
-        }
+    // Referral info & network
+    Route::get('/user/referral-link', [NetworkController::class, 'referralInfo']);
 
-        return response()->json([
-            'referral_code'   => $user->referral_code,
-            'referral_url'    => config('app.frontend_url', 'http://localhost:5173') . '/register?ref=' . $user->referral_code,
-            'total_referrals' => $referrals->count(),
-            'referrals'       => $referrals,
-        ]);
-    });
+    // System Settings (for Starcenter/MLM flow)
+    Route::get('/settings/system', [SettingsController::class, 'systemSettings']);
 
     /*
     |----------------------------------------------------------------------
     | Admin Routes
     |----------------------------------------------------------------------
     */
-    Route::middleware(\App\Http\Middleware\EnsureIsAdmin::class)->prefix('admin')->group(function () {
+    Route::middleware(EnsureIsAdmin::class)->prefix('admin')->group(function () {
 
         // Dashboard
         Route::get('/dashboard', [AdminController::class, 'dashboard']);
@@ -117,6 +80,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/orders', [OrderController::class, 'adminIndex']);
         Route::put('/orders/{id}/status', [OrderController::class, 'updateStatus']);
         Route::put('/orders/{id}/payment', [OrderController::class, 'reviewPayment']);
+
+        // Serve private payment proof file (hanya admin)
+        Route::get('/payment-proofs/{proofId}/file', [OrderController::class, 'servePaymentProof']);
 
         // Products (CRUD)
         Route::post('/products', [ProductController::class, 'store']);
@@ -137,6 +103,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Export Orders (place before {id} routes if needed, but it's isolated)
         Route::get('/orders/export', [AdminController::class, 'exportOrders']);
+
+        // Media Upload (for Appearance page video/image upload)
+        Route::post('/upload', [SettingsController::class, 'upload']);
 
         // Settings
         Route::get('/settings', [SettingsController::class, 'adminSettings']);

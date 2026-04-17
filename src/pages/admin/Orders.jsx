@@ -10,6 +10,7 @@ export default function Orders() {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
     const [exporting, setExporting] = useState(false);
 
     const handleExport = async () => {
@@ -32,7 +33,7 @@ export default function Orders() {
             a.setAttribute('href', url);
             a.setAttribute('download', `export_orders_${new Date().getTime()}.csv`);
             a.click();
-        } catch (e) {
+        } catch {
             Swal.fire('Error', 'Gagal ekspor data pesanan.', 'error');
         } finally {
             setExporting(false);
@@ -110,10 +111,19 @@ export default function Orders() {
         setIsModalOpen(true);
     };
 
+    const ALL_STATUSES = ['Menunggu Pembayaran', 'Pesanan Diproses', 'Dikirim', 'Selesai', 'Ditolak'];
+
+    const statusCounts = ALL_STATUSES.reduce((acc, status) => {
+        acc[status] = orders.filter(o => o.status === status).length;
+        return acc;
+    }, {});
+
     const filteredOrders = orders.filter(o => {
         const _id = o.order_number || o.id;
-        return String(_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
-               (o.customer_info?.name || o.customer?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+        const matchesSearch = String(_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
+               (o.customer_info?.name || o.customer?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === 'all' || o.status === statusFilter;
+        return matchesSearch && matchesStatus;
     });
 
     return (
@@ -144,6 +154,42 @@ export default function Orders() {
                         Export
                     </button>
                 </div>
+            </div>
+
+            {/* Status Filter Tabs */}
+            <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide">
+                <button
+                    onClick={() => setStatusFilter('all')}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                        statusFilter === 'all'
+                            ? 'bg-gray-800 text-white'
+                            : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                >
+                    Semua
+                    <span className={`text-xs px-1.5 py-0.5 rounded-md font-bold ${statusFilter === 'all' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                        {orders.length}
+                    </span>
+                </button>
+                {ALL_STATUSES.map(status => (
+                    <button
+                        key={status}
+                        onClick={() => setStatusFilter(status)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                            statusFilter === status
+                                ? 'bg-gray-800 text-white'
+                                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                        }`}
+                    >
+                        {getStatusIcon(status)}
+                        {status}
+                        {statusCounts[status] > 0 && (
+                            <span className={`text-xs px-1.5 py-0.5 rounded-md font-bold ${statusFilter === status ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                {statusCounts[status]}
+                            </span>
+                        )}
+                    </button>
+                ))}
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden min-h-[400px]">

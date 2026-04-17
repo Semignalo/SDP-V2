@@ -1,8 +1,80 @@
 import React, { useState, useEffect } from 'react';
 import { orderApi } from '../api/orderApi';
-import { Package, Clock, CheckCircle, Truck, XCircle, Search, ArrowRight } from 'lucide-react';
+import { Package, Clock, CheckCircle, Truck, XCircle, Search, ArrowRight, CreditCard } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
+
+const ORDER_STEPS = [
+    { key: 'pending_payment', label: 'Menunggu Bayar', icon: CreditCard },
+    { key: 'awaiting_confirmation', label: 'Konfirmasi', icon: Clock },
+    { key: 'processing', label: 'Diproses', icon: Package },
+    { key: 'completed', label: 'Selesai', icon: CheckCircle },
+];
+
+const CANCELLED_STEP = { key: 'cancelled', label: 'Dibatalkan', icon: XCircle };
+
+function OrderTimeline({ status }) {
+    const isCancelled = status === 'cancelled' || status === 'Ditolak';
+    const steps = isCancelled ? [...ORDER_STEPS.slice(0, 2), CANCELLED_STEP] : ORDER_STEPS;
+
+    // Map display/API status to step key
+    const statusToKey = {
+        pending_payment: 'pending_payment',
+        'Menunggu Pembayaran': 'pending_payment',
+        awaiting_confirmation: 'awaiting_confirmation',
+        'Pesanan Diproses': 'processing',
+        processing: 'processing',
+        Dikirim: 'processing',
+        completed: 'completed',
+        Selesai: 'completed',
+        cancelled: 'cancelled',
+        Ditolak: 'cancelled',
+    };
+    const currentKey = statusToKey[status] || 'pending_payment';
+    const currentIdx = steps.findIndex(s => s.key === currentKey);
+
+    return (
+        <div className="flex items-center gap-0 mt-3 mb-1">
+            {steps.map((step, idx) => {
+                const Icon = step.icon;
+                const isCompleted = idx < currentIdx;
+                const isActive = idx === currentIdx;
+                const isCancelledStep = step.key === 'cancelled';
+
+                return (
+                    <React.Fragment key={step.key}>
+                        <div className="flex flex-col items-center">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-colors ${
+                                isCancelledStep && isActive
+                                    ? 'bg-red-100 border-red-400 text-red-600'
+                                    : isActive
+                                    ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-white'
+                                    : isCompleted
+                                    ? 'bg-green-500 border-green-500 text-white'
+                                    : 'bg-gray-100 border-gray-200 text-gray-400'
+                            }`}>
+                                <Icon size={13} />
+                            </div>
+                            <span className={`text-[10px] mt-1 font-medium whitespace-nowrap ${
+                                isCancelledStep && isActive ? 'text-red-500'
+                                    : isActive ? 'text-[var(--color-accent)]'
+                                    : isCompleted ? 'text-green-600'
+                                    : 'text-gray-400'
+                            }`}>
+                                {step.label}
+                            </span>
+                        </div>
+                        {idx < steps.length - 1 && (
+                            <div className={`flex-1 h-0.5 mx-1 mb-4 transition-colors ${
+                                idx < currentIdx ? 'bg-green-400' : 'bg-gray-200'
+                            }`} />
+                        )}
+                    </React.Fragment>
+                );
+            })}
+        </div>
+    );
+}
 
 export default function TrackOrders() {
     const [orders, setOrders] = useState([]);
@@ -20,7 +92,7 @@ export default function TrackOrders() {
                     return;
                 }
 
-                const orderPromises = myOrderIds.map(id => orderApi.getInvoice(id).catch(e => null));
+                const orderPromises = myOrderIds.map(id => orderApi.getInvoice(id).catch(() => null));
                 const orderDocs = await Promise.all(orderPromises);
 
                 const fetchedOrders = orderDocs
@@ -177,6 +249,11 @@ export default function TrackOrders() {
                                             <StatusIcon size={16} />
                                             {getStatusInfo(order.status).label}
                                         </div>
+                                    </div>
+
+                                    {/* Status Timeline */}
+                                    <div className="px-4 md:px-5 pb-0 pt-3 border-b border-gray-50">
+                                        <OrderTimeline status={order.status} />
                                     </div>
 
                                     {/* Order Items Summary */}

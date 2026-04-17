@@ -36,15 +36,15 @@ export default function Navbar() {
                     <div className="flex items-center justify-between h-full">
 
                         {/* Left: Mobile Menu & Search (Mobile Focused) */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
                             <button
                                 onClick={() => setIsOpen(true)}
-                                className="p-2 hover:bg-gray-50 rounded-full transition-colors active:scale-95"
+                                className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-50 rounded-full transition-colors active:scale-95"
                                 aria-label="Menu"
                             >
                                 <Menu size={24} strokeWidth={1.5} className="text-gray-900" />
                             </button>
-                            <button className="p-2 hover:bg-gray-50 rounded-full transition-colors hidden sm:block">
+                            <button className="min-w-[44px] min-h-[44px] items-center justify-center hover:bg-gray-50 rounded-full transition-colors hidden sm:flex">
                                 <Search size={22} strokeWidth={1.5} className="text-gray-900" />
                             </button>
                         </div>
@@ -57,10 +57,10 @@ export default function Navbar() {
                         </div>
 
                         {/* Right: User & Cart */}
-                        <div className="flex items-center gap-2 sm:gap-4">
+                        <div className="flex items-center gap-1 sm:gap-2">
                             {currentUser ? (
                                 <div className="group relative">
-                                    <button className="p-2 hover:bg-gray-50 rounded-full transition-colors flex items-center gap-2">
+                                    <button className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-50 rounded-full transition-colors gap-2">
                                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
                                             {currentUser.email?.charAt(0).toUpperCase()}
                                         </div>
@@ -95,14 +95,14 @@ export default function Navbar() {
                                     </div>
                                 </div>
                             ) : (
-                                <Link to="/login" className="p-2 hover:bg-gray-50 rounded-full transition-colors">
+                                <Link to="/login" className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-50 rounded-full transition-colors">
                                     <User size={22} strokeWidth={1.5} className="text-gray-900" />
                                 </Link>
                             )}
 
                             <button
                                 onClick={openCart}
-                                className="p-2 hover:bg-gray-50 rounded-full transition-colors relative active:scale-95"
+                                className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-50 rounded-full transition-colors relative active:scale-95"
                             >
                                 <ShoppingBag size={22} strokeWidth={1.5} className="text-gray-900" />
                                 <span className="absolute top-0.5 right-0.5 bg-[var(--color-accent)] text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">

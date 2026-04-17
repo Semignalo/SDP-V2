@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, User } from 'lucide-react';
+import { ChevronDown, ChevronRight, User, ChevronsDownUp } from 'lucide-react';
 
 const NetworkNode = ({ node, isRoot = false }) => {
     const [expanded, setExpanded] = useState(isRoot || (node.level && node.level < 2)); // default expand root and first level
@@ -28,7 +28,7 @@ const NetworkNode = ({ node, isRoot = false }) => {
                     <div className="mt-1 w-4 h-4" /> // spacer
                 )}
                 
-                <div className={`p-4 rounded-xl border ${isRoot ? 'border-primary bg-primary/5 shadow-md' : 'border-gray-200 bg-white'} w-64 md:w-80 flex items-center gap-3 transition-all hover:shadow-md`}>
+                <div className={`p-3 md:p-4 rounded-xl border ${isRoot ? 'border-primary bg-primary/5 shadow-md' : 'border-gray-200 bg-white'} w-52 md:w-72 flex items-center gap-3 transition-all hover:shadow-md`}>
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0
                         ${isRoot ? 'bg-primary text-white' : 'bg-gray-100 text-[var(--color-primary)]'}`}>
                         {node.name ? node.name.charAt(0).toUpperCase() : <User />}
@@ -88,17 +88,31 @@ export default function NetworkTree({ referrals, currentUser }) {
     root.children = buildTree(root.id);
 
     return (
-        <div className="overflow-x-auto bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
-            <div className="min-w-fit">
-                <div className="-ml-6">
-                    <NetworkNode node={root} isRoot={true} />
-                </div>
-            </div>
-            {referrals.length === 0 && (
-                <div className="text-center text-gray-500 mt-8 mb-4">
-                    Belum ada downline di jaringan kamu.
+        <div className="bg-gray-50/50 rounded-2xl border border-gray-100">
+            {referrals.length > 0 && (
+                <div className="px-6 pt-4 pb-2 flex items-center justify-between">
+                    <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                        <ChevronsDownUp size={13} />
+                        Klik node untuk expand/collapse
+                    </p>
+                    <span className="text-xs text-gray-400 hidden md:block">Geser kanan untuk lihat lebih</span>
+                    <span className="text-xs text-gray-400 md:hidden">← Geser untuk lihat</span>
                 </div>
             )}
+            <div className="overflow-x-auto p-4 md:p-6">
+                <div className="min-w-fit">
+                    <div className="-ml-6">
+                        <NetworkNode node={root} isRoot={true} />
+                    </div>
+                </div>
+                {referrals.length === 0 && (
+                    <div className="text-center text-gray-500 py-12">
+                        <User size={40} className="mx-auto text-gray-300 mb-3" />
+                        <p className="font-medium">Belum ada downline</p>
+                        <p className="text-sm text-gray-400 mt-1">Bagikan referral kamu untuk mulai membangun jaringan.</p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

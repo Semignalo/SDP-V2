@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../../lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { adminSettingsApi } from '../../api/settingsApi';
 import { Save, Building2, CreditCard, User } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -8,7 +7,7 @@ export default function PaymentSettings() {
     const [config, setConfig] = useState({
         bankName: 'BCA',
         accountNumber: '888888888',
-        accountName: 'PT BBK' // Default as requested
+        accountName: 'PT BBK'
     });
 
     const [loading, setLoading] = useState(true);
@@ -17,16 +16,21 @@ export default function PaymentSettings() {
     useEffect(() => {
         const fetchPaymentSettings = async () => {
             try {
-                const docRef = doc(db, "settings", "payment");
-                const docSnap = await getDoc(docRef);
-
-                if (docSnap.exists()) {
-                    setConfig(docSnap.data());
-                } else {
-                    console.log("No payment settings found, using defaults.");
+                const data = await adminSettingsApi.getSettings();
+                // Backend mengembalikan settings sebagai key-value
+                // Merge data dari API ke config state
+                if (data && data.settings) {
+                    const s = data.settings;
+                    setConfig(prev => ({
+                        ...prev,
+                        bankName: s.bankName ?? prev.bankName,
+                        accountNumber: s.accountNumber ?? prev.accountNumber,
+                        accountName: s.accountName ?? prev.accountName,
+                    }));
                 }
             } catch (error) {
-                console.error("Error fetching payment settings:", error);
+                console.error('Error fetching payment settings:', error);
+                // Tidak tampilkan error - gunakan default value
             } finally {
                 setLoading(false);
             }
@@ -44,7 +48,11 @@ export default function PaymentSettings() {
         e.preventDefault();
         setSaving(true);
         try {
-            await setDoc(doc(db, "settings", "payment"), config);
+            await adminSettingsApi.updateSettings({
+                bankName: config.bankName,
+                accountNumber: config.accountNumber,
+                accountName: config.accountName,
+            });
             Swal.fire({
                 title: 'Berhasil!',
                 text: 'Pengaturan pembayaran berhasil disimpan.',
@@ -53,10 +61,10 @@ export default function PaymentSettings() {
                 confirmButtonText: 'Tutup'
             });
         } catch (error) {
-            console.error("Error saving payment settings:", error);
+            console.error('Error saving payment settings:', error);
             Swal.fire({
                 title: 'Gagal!',
-                text: 'Terjadi kesalahan saat menyimpan pengaturan.',
+                text: error?.response?.data?.message || 'Terjadi kesalahan saat menyimpan pengaturan.',
                 icon: 'error',
                 confirmButtonColor: '#111827',
                 confirmButtonText: 'Tutup'

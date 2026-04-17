@@ -64,26 +64,70 @@ function TrackingBar({ status }) {
     );
 }
 
+const STATUS_LABELS = {
+    pending_payment: 'Menunggu Pembayaran',
+    processing: 'Pesanan Diproses',
+    shipped: 'Dalam Pengiriman',
+    completed: 'Selesai',
+    rejected: 'Ditolak',
+};
+
 export default function ProfileOrders() {
     const { currentUser } = useAuth();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [uploadingId, setUploadingId] = useState(null);
+    const prevStatusesRef = React.useRef({});
+
+    const fetchMyOrders = React.useCallback(async (silent = false) => {
+        if (!currentUser) return;
+        if (!silent) setLoading(true);
+        try {
+            const resp = await orderApi.getMyOrders();
+            const newOrders = resp.data || [];
+
+            // Detect status changes and toast notification
+            if (silent && Object.keys(prevStatusesRef.current).length > 0) {
+                newOrders.forEach(order => {
+                    const prev = prevStatusesRef.current[order.id];
+                    if (prev && prev !== order.status) {
+                        const newLabel = STATUS_LABELS[order.status] || order.status;
+                        Swal.fire({
+                            title: 'Status Pesanan Berubah!',
+                            html: `Pesanan <b>#${order.order_number}</b><br/>sekarang: <b>${newLabel}</b>`,
+                            icon: 'info',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 5000,
+                            timerProgressBar: true,
+                        });
+                    }
+                });
+            }
+
+            // Update status reference
+            const statusMap = {};
+            newOrders.forEach(o => { statusMap[o.id] = o.status; });
+            prevStatusesRef.current = statusMap;
+
+            setOrders(newOrders);
+        } catch (error) {
+            console.error('Gagal menarik data pesanan:', error);
+        } finally {
+            if (!silent) setLoading(false);
+        }
+    }, [currentUser]);
 
     useEffect(() => {
-        const fetchMyOrders = async () => {
-            if (!currentUser) return;
-            try {
-                const resp = await orderApi.getMyOrders();
-                setOrders(resp.data || []);
-            } catch (error) {
-                console.error('Gagal menarik data pesanan:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchMyOrders();
-    }, [currentUser]);
+    }, [fetchMyOrders]);
+
+    // Poll every 30 seconds for status changes
+    useEffect(() => {
+        const interval = setInterval(() => fetchMyOrders(true), 30000);
+        return () => clearInterval(interval);
+    }, [fetchMyOrders]);
 
     const handleUploadProof = async (orderId, file) => {
         if (!file) return;

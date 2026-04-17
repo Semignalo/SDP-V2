@@ -24,7 +24,7 @@ export default function Commissions() {
 
     useEffect(() => {
         fetchCommissions();
-    }, [statusFilter]);
+    }, [statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const formatCurrency = (val) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
@@ -63,7 +63,7 @@ export default function Commissions() {
                 Swal.fire('Berhasil', 'Komisi berhasil dicairkan.', 'success');
                 fetchCommissions();
             }
-        } catch (e) {
+        } catch {
             Swal.fire('Error', 'Gagal memproses pembayaran.', 'error');
         }
     };
@@ -87,7 +87,7 @@ export default function Commissions() {
                 setSelectedIds([]);
                 fetchCommissions();
             }
-        } catch (e) {
+        } catch {
             Swal.fire('Error', 'Gagal memproses bulk payment.', 'error');
         }
     };
@@ -122,7 +122,7 @@ export default function Commissions() {
             a.setAttribute('download', `export_commissions_${new Date().getTime()}.csv`);
             a.click();
             
-        } catch (e) {
+        } catch {
             Swal.fire('Error', 'Gagal mengekspor data komisi.', 'error');
         } finally {
             setExporting(false);

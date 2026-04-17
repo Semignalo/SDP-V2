@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, ShoppingCart, Users, AlertCircle, RefreshCw } from 'lucide-react';
+import { TrendingUp, ShoppingCart, Users, AlertCircle, RefreshCw, ArrowUpRight, Clock } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import {
   LineChart,
@@ -59,14 +59,42 @@ export default function AdminDashboard() {
         recent_orders
     } = data;
 
+    const totalCommissions = (pending_commissions || 0) + (paid_commissions || 0);
+
     return (
         <div>
-            <div className="flex justify-between items-end mb-8">
-                <h1 className="text-2xl font-bold text-gray-800">Dashboard Overview</h1>
+            <div className="flex justify-between items-end mb-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-800">Dashboard Overview</h1>
+                    <p className="text-sm text-gray-500 mt-0.5">Ringkasan performa bisnis hari ini</p>
+                </div>
                 <button onClick={fetchDashboard} className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg flex items-center gap-2">
                     <RefreshCw size={14} /> Refresh
                 </button>
             </div>
+
+            {/* Urgent Alert: Pending Payments */}
+            {pending_payments > 0 && (
+                <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                        <Clock size={18} className="text-amber-600" />
+                    </div>
+                    <div className="flex-1">
+                        <p className="text-sm font-bold text-amber-900">
+                            {pending_payments} Pembayaran Menunggu Verifikasi
+                        </p>
+                        <p className="text-xs text-amber-700 mt-0.5">
+                            Segera tinjau dan konfirmasi bukti pembayaran dari pelanggan.
+                        </p>
+                    </div>
+                    <a
+                        href="/admin/orders"
+                        className="text-xs font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap flex items-center gap-1"
+                    >
+                        Lihat Orders <ArrowUpRight size={12} />
+                    </a>
+                </div>
+            )}
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -153,19 +181,41 @@ export default function AdminDashboard() {
                 {/* Commission Summary */}
                 <div className="bg-white p-6 rounded-xl shadow-sm">
                     <h3 className="text-lg font-bold text-gray-800 mb-6">Ringkasan Komisi</h3>
-                    <div className="space-y-6">
+                    <div className="space-y-5">
                         <div>
-                            <p className="text-sm text-gray-500 mb-1">Menunggu Pencairan</p>
+                            <div className="flex justify-between items-center mb-1">
+                                <p className="text-sm text-gray-500">Menunggu Pencairan</p>
+                                <span className="text-xs font-bold text-yellow-600">
+                                    {totalCommissions > 0 ? Math.round((pending_commissions / totalCommissions) * 100) : 0}%
+                                </span>
+                            </div>
                             <p className="text-2xl font-bold text-yellow-600">{formatCurrency(pending_commissions)}</p>
                             <div className="w-full bg-gray-100 h-2 rounded-full mt-2">
-                                <div className="bg-yellow-400 h-2 rounded-full" style={{width: pending_commissions > 0 ? '100%' : '0%'}}></div>
+                                <div
+                                    className="bg-yellow-400 h-2 rounded-full transition-all duration-500"
+                                    style={{width: totalCommissions > 0 ? `${(pending_commissions / totalCommissions) * 100}%` : '0%'}}
+                                />
                             </div>
                         </div>
                         <div>
-                            <p className="text-sm text-gray-500 mb-1">Sudah Dibayar</p>
+                            <div className="flex justify-between items-center mb-1">
+                                <p className="text-sm text-gray-500">Sudah Dibayar</p>
+                                <span className="text-xs font-bold text-green-600">
+                                    {totalCommissions > 0 ? Math.round((paid_commissions / totalCommissions) * 100) : 0}%
+                                </span>
+                            </div>
                             <p className="text-2xl font-bold text-green-600">{formatCurrency(paid_commissions)}</p>
                             <div className="w-full bg-gray-100 h-2 rounded-full mt-2">
-                                <div className="bg-green-500 h-2 rounded-full" style={{width: paid_commissions > 0 ? '100%' : '0%'}}></div>
+                                <div
+                                    className="bg-green-500 h-2 rounded-full transition-all duration-500"
+                                    style={{width: totalCommissions > 0 ? `${(paid_commissions / totalCommissions) * 100}%` : '0%'}}
+                                />
+                            </div>
+                        </div>
+                        <div className="pt-3 border-t border-gray-100">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Total Komisi</span>
+                                <span className="font-bold text-gray-800">{formatCurrency(totalCommissions)}</span>
                             </div>
                         </div>
                     </div>
@@ -216,6 +266,7 @@ export default function AdminDashboard() {
     );
 }
 
+// eslint-disable-next-line no-unused-vars
 function StatCard({ title, value, subtext, trend, icon: Icon, color }) {
     return (
         <div className="bg-white p-6 rounded-xl shadow-sm flex items-start justify-between">

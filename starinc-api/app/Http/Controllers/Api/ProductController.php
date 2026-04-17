@@ -59,9 +59,11 @@ class ProductController extends Controller
             'description'    => 'nullable|string',
             'is_promo'       => 'boolean',
             'sort_order'     => 'integer',
-            'variants'       => 'nullable|array',
+            'stock'          => 'nullable|integer|min:0',
+            'variants'         => 'nullable|array',
             'variants.*.name'  => 'required_with:variants|string|max:100',
             'variants.*.price' => 'required_with:variants|numeric|min:0',
+            'variants.*.stock' => 'nullable|integer|min:0',
         ]);
 
         $product = Product::create($validated);
@@ -95,9 +97,11 @@ class ProductController extends Controller
             'description'    => 'nullable|string',
             'is_promo'       => 'boolean',
             'sort_order'     => 'integer',
-            'variants'       => 'nullable|array',
+            'stock'          => 'nullable|integer|min:0',
+            'variants'         => 'nullable|array',
             'variants.*.name'  => 'required_with:variants|string|max:100',
             'variants.*.price' => 'required_with:variants|numeric|min:0',
+            'variants.*.stock' => 'nullable|integer|min:0',
         ]);
 
         $product->update($validated);

@@ -1,54 +1,146 @@
 import React, { useState, useEffect } from 'react';
-import { db, storage } from '../../lib/firebase';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { Save, Image, Type, Palette, Video, Upload, Loader2, X } from 'lucide-react';
+import { adminSettingsApi } from '../../api/settingsApi';
+import { Save, Image, Type, Palette, Video, Upload, Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
+
+const DEFAULT_CONFIG = {
+    heroVideoUrl: 'https://cdn.pixabay.com/video/2023/10/22/186175-877661556_large.mp4',
+    heroTitle: 'True Radiance',
+    heroSubtitle: 'Discover the new Gold Standard for your skin.',
+    logoUrl: '/logo.png',
+    announcementText: 'New Collection 2026',
+    primaryColor: '#1A1A1A',
+    accentColor: '#C5A059',
+    goldSerumVideoUrl: '',
+    goldSerumSubtitle: 'Face cleansing balm',
+    goldSerumDescription1: 'This gentle cleansing balm deeply cleanses and removes even waterproof makeup without irritating or drying out eyes.',
+    goldSerumDescription2: 'Fragrance-free, lightly scented with ginger and lemon essential oils.',
+    secondFeaturedVideoUrl: '',
+    secondFeaturedSubtitle: 'Our Concept',
+    secondFeaturedDescription1: 'A focus on healthy, radiant skin.',
+    secondFeaturedDescription2: 'Crafted with passion.'
+};
+
+/**
+ * Komponen untuk upload video dengan progress bar.
+ * Menggunakan adminSettingsApi.uploadFile (Laravel storage).
+ */
+function VideoUploadField({ label, fieldName, value, onChange, hint }) {
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+
+    const handleUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        try {
+            const result = await adminSettingsApi.uploadFile(
+                file,
+                'appearance',
+                (percent) => setUploadProgress(percent)
+            );
+            onChange(fieldName, result.url);
+        } catch (error) {
+            console.error('Upload gagal:', error);
+            Swal.fire({
+                title: 'Upload Gagal!',
+                text: error?.response?.data?.message || error.message || 'Terjadi kesalahan saat upload.',
+                icon: 'error',
+                confirmButtonColor: '#111827'
+            });
+        } finally {
+            setIsUploading(false);
+            setUploadProgress(0);
+        }
+    };
+
+    return (
+        <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 block">{label}</label>
+            {hint && <p className="text-xs text-gray-500">{hint}</p>}
+            <div className="flex gap-4 items-center">
+                <input
+                    name={fieldName}
+                    value={value || ''}
+                    onChange={(e) => onChange(fieldName, e.target.value)}
+                    className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-mono text-xs"
+                    placeholder="Paste video URL atau upload di bawah"
+                />
+                <label className="cursor-pointer bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2">
+                    <Upload size={16} /> Upload Video
+                    <input
+                        type="file"
+                        accept="video/mp4,video/webm"
+                        onChange={handleUpload}
+                        className="hidden"
+                        disabled={isUploading}
+                    />
+                </label>
+            </div>
+            {isUploading && (
+                <div className="mt-2 flex items-center gap-2">
+                    <Loader2 className="animate-spin text-blue-600" size={14} />
+                    <div className="h-1.5 flex-1 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                            className="h-full bg-blue-600 transition-all duration-300"
+                            style={{ width: `${uploadProgress}%` }}
+                        />
+                    </div>
+                    <span className="text-xs text-gray-500">{uploadProgress}%</span>
+                </div>
+            )}
+            {value && (
+                <div className="mt-4 max-w-[150px] aspect-[3/4] bg-black rounded-lg overflow-hidden relative">
+                    <video src={value} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function AdminAppearance() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState(0);
-    const [isUploading, setIsUploading] = useState(false);
-    const [config, setConfig] = useState({
-        heroVideoUrl: 'https://cdn.pixabay.com/video/2023/10/22/186175-877661556_large.mp4',
-        heroTitle: 'True Radiance',
-        heroSubtitle: 'Discover the new Gold Standard for your skin.',
-        logoUrl: '/logo.png', // Default local path
-        announcementText: 'New Collection 2026',
-        primaryColor: '#1A1A1A',
-        accentColor: '#C5A059',
-        goldSerumVideoUrl: '',
-        goldSerumSubtitle: 'Face cleansing balm',
-        goldSerumDescription1: 'This gentle cleansing balm deeply cleanses and removes even waterproof makeup without irritating or drying out eyes.',
-        goldSerumDescription2: 'Fragrance-free, lightly scented with ginger and lemon essential oils.',
-        secondFeaturedVideoUrl: '',
-        secondFeaturedSubtitle: 'Our Concept',
-        secondFeaturedDescription1: 'A focus on healthy, radiant skin.',
-        secondFeaturedDescription2: 'Crafted with passion.'
-    });
+    const [lastSaved, setLastSaved] = useState(null);
+    const [config, setConfig] = useState(DEFAULT_CONFIG);
 
     useEffect(() => {
-        // Listen to real-time updates for the config
-        const unsubscribe = onSnapshot(doc(db, "settings", "appearance"), (doc) => {
-            if (doc.exists()) {
-                setConfig({ ...config, ...doc.data() });
+        const fetchAppearance = async () => {
+            try {
+                const data = await adminSettingsApi.getAppearance();
+                if (data && data.settings) {
+                    setConfig(prev => ({ ...prev, ...data.settings }));
+                }
+            } catch (error) {
+                console.error('Error fetching appearance settings:', error);
+                // Gunakan default config jika fetch gagal
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
-        });
+        };
 
-        return () => unsubscribe();
+        fetchAppearance();
     }, []);
 
     const handleChange = (e) => {
-        setConfig({ ...config, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setConfig(prev => ({ ...prev, [name]: value }));
+    };
+
+    // Handler khusus untuk field yang diupdate dari komponen anak (VideoUploadField)
+    const handleFieldChange = (fieldName, value) => {
+        setConfig(prev => ({ ...prev, [fieldName]: value }));
     };
 
     const handleSave = async (e) => {
         e.preventDefault();
         setSaving(true);
         try {
-            await setDoc(doc(db, "settings", "appearance"), config);
+            await adminSettingsApi.updateAppearance(config);
+            setLastSaved(new Date());
             Swal.fire({
                 title: 'Berhasil!',
                 text: 'Pengaturan tampilan berhasil disimpan.',
@@ -57,10 +149,10 @@ export default function AdminAppearance() {
                 confirmButtonText: 'Tutup'
             });
         } catch (error) {
-            console.error("Error saving settings:", error);
+            console.error('Error saving settings:', error);
             Swal.fire({
                 title: 'Gagal!',
-                text: 'Terjadi kesalahan saat menyimpan pengaturan.',
+                text: error?.response?.data?.message || 'Terjadi kesalahan saat menyimpan pengaturan.',
                 icon: 'error',
                 confirmButtonColor: '#111827',
                 confirmButtonText: 'Tutup'
@@ -68,139 +160,6 @@ export default function AdminAppearance() {
         } finally {
             setSaving(false);
         }
-    };
-
-    const handleVideoUpload = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        // Reset progress
-        setUploadProgress(0);
-        setIsUploading(true);
-
-        const storageRef = ref(storage, `appearance/${Date.now()}_${file.name}`);
-        const uploadTask = uploadBytesResumable(storageRef, file);
-
-        uploadTask.on('state_changed',
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                setUploadProgress(progress);
-            },
-            (error) => {
-                console.error("Upload failed:", error);
-                setIsUploading(false);
-                if (error.code === 'storage/unauthorized') {
-                    Swal.fire({
-                        title: 'Akses Ditolak!',
-                        text: 'Upload gagal. Pastikan rules Firebase Storage mengizinkan write.',
-                        icon: 'error',
-                        confirmButtonColor: '#111827'
-                    });
-                } else {
-                    Swal.fire({
-                        title: 'Upload Gagal!',
-                        text: error.message,
-                        icon: 'error',
-                        confirmButtonColor: '#111827'
-                    });
-                }
-            },
-            () => {
-                getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-                    setConfig(prev => ({ ...prev, heroVideoUrl: downloadURL }));
-                    setIsUploading(false);
-                    setUploadProgress(0);
-                });
-            }
-        );
-    };
-
-    const handleGoldSerumVideoUpload = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        setUploadProgress(0);
-        setIsUploading(true);
-
-        const storageRef = ref(storage, `appearance/featured_${Date.now()}_${file.name}`);
-        const uploadTask = uploadBytesResumable(storageRef, file);
-
-        uploadTask.on('state_changed',
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                setUploadProgress(progress);
-            },
-            (error) => {
-                console.error("Upload failed:", error);
-                setIsUploading(false);
-                if (error.code === 'storage/unauthorized') {
-                    Swal.fire({
-                        title: 'Akses Ditolak!',
-                        text: 'Upload gagal. Pastikan rules Firebase Storage mengizinkan write.',
-                        icon: 'error',
-                        confirmButtonColor: '#111827'
-                    });
-                } else {
-                    Swal.fire({
-                        title: 'Upload Gagal!',
-                        text: error.message,
-                        icon: 'error',
-                        confirmButtonColor: '#111827'
-                    });
-                }
-            },
-            () => {
-                getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-                    setConfig(prev => ({ ...prev, goldSerumVideoUrl: downloadURL }));
-                    setIsUploading(false);
-                    setUploadProgress(0);
-                });
-            }
-        );
-    };
-
-    const handleSecondVideoUpload = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        setUploadProgress(0);
-        setIsUploading(true);
-
-        const storageRef = ref(storage, `appearance/featured_second_${Date.now()}_${file.name}`);
-        const uploadTask = uploadBytesResumable(storageRef, file);
-
-        uploadTask.on('state_changed',
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                setUploadProgress(progress);
-            },
-            (error) => {
-                console.error("Upload failed:", error);
-                setIsUploading(false);
-                if (error.code === 'storage/unauthorized') {
-                    Swal.fire({
-                        title: 'Akses Ditolak!',
-                        text: 'Upload gagal. Pastikan rules Firebase Storage mengizinkan write.',
-                        icon: 'error',
-                        confirmButtonColor: '#111827'
-                    });
-                } else {
-                    Swal.fire({
-                        title: 'Upload Gagal!',
-                        text: error.message,
-                        icon: 'error',
-                        confirmButtonColor: '#111827'
-                    });
-                }
-            },
-            () => {
-                getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-                    setConfig(prev => ({ ...prev, secondFeaturedVideoUrl: downloadURL }));
-                    setIsUploading(false);
-                    setUploadProgress(0);
-                });
-            }
-        );
     };
 
     if (loading) return <div className="text-gray-500">Loading settings...</div>;
@@ -224,8 +183,10 @@ export default function AdminAppearance() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                {/* Left Column: Hero Section */}
+                {/* Kolom Kiri: Form Settings */}
                 <div className="lg:col-span-2 space-y-6">
+
+                    {/* Hero Section */}
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                         <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
                             <Video size={20} className="text-gray-400" />
@@ -258,50 +219,24 @@ export default function AdminAppearance() {
                                 </div>
                             </div>
 
+                            {/* Hero Video Upload */}
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                <label className="text-sm font-medium text-gray-700">
                                     Video URL (Background)
                                 </label>
-
                                 <div className="space-y-3">
-                                    {/* Manual URL Input */}
                                     <input
                                         name="heroVideoUrl"
                                         value={config.heroVideoUrl}
                                         onChange={handleChange}
                                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-mono text-xs text-gray-600"
-                                        placeholder="Paste video URL or upload below..."
+                                        placeholder="Paste video URL atau upload di bawah..."
                                     />
-
-                                    {/* Upload Button */}
                                     <div className="flex items-center gap-4">
-                                        <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                            <Upload size={16} />
-                                            Upload Video (MP4)
-                                            <input
-                                                type="file"
-                                                accept="video/mp4,video/webm"
-                                                onChange={handleVideoUpload}
-                                                className="hidden"
-                                                disabled={isUploading}
-                                            />
-                                        </label>
-
-                                        {isUploading && (
-                                            <div className="flex-1 flex items-center gap-2">
-                                                <Loader2 className="animate-spin text-blue-600" size={16} />
-                                                <div className="h-2 flex-1 bg-gray-200 rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-blue-600 transition-all duration-300"
-                                                        style={{ width: `${uploadProgress}%` }}
-                                                    ></div>
-                                                </div>
-                                                <span className="text-xs text-gray-500">{Math.round(uploadProgress)}%</span>
-                                            </div>
-                                        )}
+                                        <HeroVideoUploader
+                                            onChange={(url) => handleFieldChange('heroVideoUrl', url)}
+                                        />
                                     </div>
-
-                                    {/* Preview */}
                                     {config.heroVideoUrl && (
                                         <div className="mt-2 relative rounded-lg overflow-hidden bg-black aspect-video group">
                                             <video
@@ -319,8 +254,7 @@ export default function AdminAppearance() {
                                             </div>
                                         </div>
                                     )}
-
-                                    <p className="text-xs text-gray-400">Pastikan link berakhiran .mp4 untuk hasil terbaik. Maksimal ukuran file tergantung paket Firebase Anda.</p>
+                                    <p className="text-xs text-gray-400">Pastikan link berakhiran .mp4 untuk hasil terbaik.</p>
                                 </div>
                             </div>
                         </div>
@@ -372,7 +306,7 @@ export default function AdminAppearance() {
                         </div>
                     </div>
 
-                    {/* Featured Video Section */}
+                    {/* Featured Video & Text Section */}
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                         <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
                             <Video size={20} className="text-gray-400" />
@@ -389,7 +323,6 @@ export default function AdminAppearance() {
                                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                                 />
                             </div>
-
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-gray-700">Deskripsi Paragraf 1</label>
                                 <textarea
@@ -400,7 +333,6 @@ export default function AdminAppearance() {
                                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none"
                                 />
                             </div>
-
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-gray-700">Deskripsi Paragraf 2</label>
                                 <textarea
@@ -411,37 +343,13 @@ export default function AdminAppearance() {
                                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none"
                                 />
                             </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700 border-t border-gray-100 pt-4 mt-2 mb-1 block">Video URL (Format MP4/WebM Terkompres)</label>
-                                <p className="text-xs text-gray-500 mb-2">Gunakan format video terkompres dengan framerate 30fps dan resolusi maksimal 1080p (vertikal 4:3) agar performa website (loading speed) tetap cepat.</p>
-                                <div className="flex gap-4 items-center">
-                                    <input
-                                        name="goldSerumVideoUrl"
-                                        value={config.goldSerumVideoUrl || ''}
-                                        onChange={handleChange}
-                                        className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-mono text-xs"
-                                        placeholder="Paste video URL"
-                                    />
-                                    <label className="cursor-pointer bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2">
-                                        <Upload size={16} /> Upload Video
-                                        <input type="file" accept="video/mp4,video/webm" onChange={handleGoldSerumVideoUpload} className="hidden" disabled={isUploading} />
-                                    </label>
-                                </div>
-                                {isUploading && (
-                                    <div className="mt-2 flex items-center gap-2">
-                                        <Loader2 className="animate-spin text-blue-600" size={14} />
-                                        <div className="h-1.5 flex-1 bg-gray-200 rounded-full overflow-hidden">
-                                            <div className="h-full bg-blue-600 transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
-                                        </div>
-                                    </div>
-                                )}
-                                {config.goldSerumVideoUrl && (
-                                    <div className="mt-4 max-w-[150px] aspect-[3/4] bg-black rounded-lg overflow-hidden relative">
-                                        <video src={config.goldSerumVideoUrl} autoPlay loop muted playsInline className="w-full h-full object-cover" />
-                                    </div>
-                                )}
-                            </div>
+                            <VideoUploadField
+                                label="Video URL (Format MP4/WebM Terkompres)"
+                                fieldName="goldSerumVideoUrl"
+                                value={config.goldSerumVideoUrl}
+                                onChange={handleFieldChange}
+                                hint="Gunakan format video terkompres dengan framerate 30fps dan resolusi maksimal 1080p (vertikal 4:3) agar performa website tetap cepat."
+                            />
                         </div>
                     </div>
 
@@ -449,7 +357,7 @@ export default function AdminAppearance() {
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                         <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
                             <Video size={20} className="text-gray-400" />
-                            Second Featured Video Section (Video dikanan)
+                            Second Featured Video Section (Video di kanan)
                         </h3>
 
                         <div className="space-y-4">
@@ -462,7 +370,6 @@ export default function AdminAppearance() {
                                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                                 />
                             </div>
-
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-gray-700">Deskripsi Paragraf 1</label>
                                 <textarea
@@ -473,7 +380,6 @@ export default function AdminAppearance() {
                                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none"
                                 />
                             </div>
-
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-gray-700">Deskripsi Paragraf 2</label>
                                 <textarea
@@ -484,55 +390,97 @@ export default function AdminAppearance() {
                                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none"
                                 />
                             </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700 border-t border-gray-100 pt-4 mt-2 mb-1 block">Video URL (Format MP4/WebM Terkompres)</label>
-                                <p className="text-xs text-gray-500 mb-2">Gunakan format video terkompres dengan framerate 30fps dan resolusi maksimal 1080p (vertikal 4:3).</p>
-                                <div className="flex gap-4 items-center">
-                                    <input
-                                        name="secondFeaturedVideoUrl"
-                                        value={config.secondFeaturedVideoUrl || ''}
-                                        onChange={handleChange}
-                                        className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-mono text-xs"
-                                        placeholder="Paste video URL"
-                                    />
-                                    <label className="cursor-pointer bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2">
-                                        <Upload size={16} /> Upload Video
-                                        <input type="file" accept="video/mp4,video/webm" onChange={handleSecondVideoUpload} className="hidden" disabled={isUploading} />
-                                    </label>
-                                </div>
-                                {isUploading && (
-                                    <div className="mt-2 flex items-center gap-2">
-                                        <Loader2 className="animate-spin text-blue-600" size={14} />
-                                        <div className="h-1.5 flex-1 bg-gray-200 rounded-full overflow-hidden">
-                                            <div className="h-full bg-blue-600 transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
-                                        </div>
-                                    </div>
-                                )}
-                                {config.secondFeaturedVideoUrl && (
-                                    <div className="mt-4 max-w-[150px] aspect-[3/4] bg-black rounded-lg overflow-hidden relative">
-                                        <video src={config.secondFeaturedVideoUrl} autoPlay loop muted playsInline className="w-full h-full object-cover" />
-                                    </div>
-                                )}
-                            </div>
+                            <VideoUploadField
+                                label="Video URL (Format MP4/WebM Terkompres)"
+                                fieldName="secondFeaturedVideoUrl"
+                                value={config.secondFeaturedVideoUrl}
+                                onChange={handleFieldChange}
+                                hint="Gunakan format video terkompres dengan framerate 30fps dan resolusi maksimal 1080p (vertikal 4:3)."
+                            />
                         </div>
                     </div>
                 </div>
 
-                {/* Right Column: Preview / Info */}
+                {/* Kolom Kanan: Info */}
                 <div className="space-y-6">
                     <div className="bg-blue-50 border border-blue-100 p-6 rounded-xl">
                         <h4 className="text-blue-800 font-bold mb-2">Live Preview</h4>
                         <p className="text-sm text-blue-600 mb-4 leading-relaxed">
-                            Setiap perubahan yang Anda simpan akan langsung aktif di halaman utama website tanpa perlu refresh.
+                            Setiap perubahan yang Anda simpan akan langsung aktif di halaman utama website.
                         </p>
                         <div className="text-xs bg-white/50 p-3 rounded text-blue-800 font-mono">
-                            Last updated: {new Date().toLocaleTimeString()}
+                            {lastSaved
+                                ? `Last saved: ${lastSaved.toLocaleTimeString('id-ID')}`
+                                : 'Belum ada perubahan disimpan'}
                         </div>
                     </div>
                 </div>
 
             </div>
         </div>
+    );
+}
+
+/**
+ * Sub-komponen upload untuk hero video (inline, karena layoutnya berbeda).
+ */
+function HeroVideoUploader({ onChange }) {
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+
+    const handleUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        try {
+            const result = await adminSettingsApi.uploadFile(
+                file,
+                'appearance',
+                (percent) => setUploadProgress(percent)
+            );
+            onChange(result.url);
+        } catch (error) {
+            console.error('Upload gagal:', error);
+            Swal.fire({
+                title: 'Upload Gagal!',
+                text: error?.response?.data?.message || error.message || 'Terjadi kesalahan saat upload.',
+                icon: 'error',
+                confirmButtonColor: '#111827'
+            });
+        } finally {
+            setIsUploading(false);
+            setUploadProgress(0);
+        }
+    };
+
+    return (
+        <>
+            <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                <Upload size={16} />
+                Upload Video (MP4)
+                <input
+                    type="file"
+                    accept="video/mp4,video/webm"
+                    onChange={handleUpload}
+                    className="hidden"
+                    disabled={isUploading}
+                />
+            </label>
+            {isUploading && (
+                <div className="flex-1 flex items-center gap-2">
+                    <Loader2 className="animate-spin text-blue-600" size={16} />
+                    <div className="h-2 flex-1 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                            className="h-full bg-blue-600 transition-all duration-300"
+                            style={{ width: `${uploadProgress}%` }}
+                        />
+                    </div>
+                    <span className="text-xs text-gray-500">{Math.round(uploadProgress)}%</span>
+                </div>
+            )}
+        </>
     );
 }

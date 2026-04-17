@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const CartContext = createContext();
+const CART_STORAGE_KEY = 'shopping-cart';
 
 export function useCart() {
     return useContext(CartContext);
@@ -9,25 +11,46 @@ export function useCart() {
 export function CartProvider({ children }) {
     const [cart, setCart] = useState(() => {
         try {
-            const storedCart = localStorage.getItem('shopping-cart');
+            const storedCart = localStorage.getItem(CART_STORAGE_KEY);
             return storedCart ? JSON.parse(storedCart) : [];
         } catch (error) {
-            console.error("Failed to parse cart from local storage", error);
+            console.error("Failed to parse cart from localStorage", error);
             return [];
         }
     });
 
     const [isCartOpen, setIsCartOpen] = useState(false);
 
+    // Simpan ke localStorage setiap kali cart berubah
     useEffect(() => {
         try {
-            localStorage.setItem('shopping-cart', JSON.stringify(cart));
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
         } catch (error) {
-            console.error("Failed to save cart to local storage", error);
+            console.error("Failed to save cart to localStorage", error);
         }
     }, [cart]);
 
-    const addToCart = (product, quantity = 1) => {
+    /**
+     * B2 — Multi-tab sync via storage event.
+     * Saat tab lain mengubah shopping-cart di localStorage,
+     * tab ini akan menyinkronkan state cart-nya.
+     */
+    useEffect(() => {
+        const handleStorageChange = (event) => {
+            if (event.key !== CART_STORAGE_KEY) return;
+            try {
+                const updatedCart = event.newValue ? JSON.parse(event.newValue) : [];
+                setCart(updatedCart);
+            } catch (error) {
+                console.error("Failed to sync cart from storage event", error);
+            }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, []);
+
+    const addToCart = useCallback((product, quantity = 1) => {
         setCart(prevCart => {
             const compositeId = product.cartItemId || product.id;
             const existingItem = prevCart.find(item => (item.cartItemId || item.id) === compositeId);
@@ -42,41 +65,42 @@ export function CartProvider({ children }) {
             }
         });
         setIsCartOpen(true);
-    };
+    }, []);
 
-    const removeFromCart = (identifier) => {
+    const removeFromCart = useCallback((identifier) => {
         setCart(prevCart => prevCart.filter(item => (item.cartItemId || item.id) !== identifier));
-    };
+    }, []);
 
-    const updateQuantity = (identifier, newQuantity) => {
+    const updateQuantity = useCallback((identifier, newQuantity) => {
         if (newQuantity < 1) {
             removeFromCart(identifier);
             return;
         }
         setCart(prevCart =>
             prevCart.map(item =>
-                (item.cartItemId || item.id) === identifier ? { ...item, quantity: newQuantity } : item
+                (item.cartItemId || item.id) === identifier
+                    ? { ...item, quantity: newQuantity }
+                    : item
             )
         );
-    };
+    }, [removeFromCart]);
 
-    const clearCart = () => {
+    const clearCart = useCallback(() => {
         setCart([]);
-    };
+    }, []);
 
-    const getCartTotal = () => {
+    const getCartTotal = useCallback(() => {
         return cart.reduce((total, item) => {
             if (!item || !item.price) return total;
-            // Remove commas and parse price
             const priceStr = String(item.price).replace(/,/g, '');
             const price = parseFloat(priceStr) || 0;
             return total + (price * item.quantity);
         }, 0);
-    };
+    }, [cart]);
 
-    const getCartCount = () => {
+    const getCartCount = useCallback(() => {
         return cart.reduce((count, item) => count + item.quantity, 0);
-    };
+    }, [cart]);
 
     const openCart = () => setIsCartOpen(true);
     const closeCart = () => setIsCartOpen(false);

@@ -10,16 +10,17 @@ class Product extends Model
 {
     protected $fillable = [
         'title', 'price', 'original_price', 'discount_label',
-        'category', 'description', 'main_image', 'is_promo', 'sort_order',
+        'category', 'description', 'main_image', 'is_promo', 'sort_order', 'stock',
     ];
 
     protected $casts = [
         'price'          => 'decimal:2',
         'original_price' => 'decimal:2',
         'is_promo'       => 'boolean',
+        'stock'          => 'integer',
     ];
 
-    protected $appends = ['main_image_url'];
+    protected $appends = ['main_image_url', 'is_out_of_stock'];
 
     public function variants(): HasMany
     {
@@ -39,5 +40,34 @@ class Product extends Model
     {
         if (!$this->main_image) return null;
         return Storage::disk('public')->url($this->main_image);
+    }
+
+    /**
+     * Whether the product is completely out of stock.
+     *
+     * Logic:
+     * - No variants: use product-level stock (null = unlimited → false).
+     * - Has variants: true only if EVERY variant is explicitly out of stock (stock = 0).
+     *   A variant with null stock falls back to the product-level stock.
+     */
+    public function getIsOutOfStockAttribute(): bool
+    {
+        // Product-level stock: null means unlimited
+        $productStock = $this->stock;
+
+        if ($this->relationLoaded('variants') && $this->variants->isNotEmpty()) {
+            foreach ($this->variants as $variant) {
+                // Variant with null stock inherits product-level stock
+                $effectiveStock = $variant->stock ?? $productStock;
+                // If any variant is available (null = unlimited, or > 0), not fully out
+                if ($effectiveStock === null || $effectiveStock > 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // No variants: only out of stock if explicitly set to 0
+        return $productStock !== null && $productStock <= 0;
     }
 }

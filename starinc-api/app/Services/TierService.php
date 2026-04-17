@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\Tier;
 use App\Models\SystemSetting;
+use App\Models\Tier;
+use App\Models\User;
 
 class TierService
 {
@@ -27,6 +27,7 @@ class TierService
                     $user->tier_id = $tier->id;
                     $user->save();
                 }
+
                 return;
             }
         }
@@ -65,7 +66,9 @@ class TierService
 
             if ($newIndex !== $currentIndex) {
                 $user->tier_id = $tierIds[$newIndex];
-                $user->last_transaction_at = now(); // Reset timer after downgrade
+                // B6 FIX: JANGAN reset last_transaction_at setelah downgrade.
+                // Reset ke now() menyebabkan user tidak bisa didowngrade lagi selama 30 hari berikutnya,
+                // padahal tidak ada transaksi baru. Timer harus tetap berjalan dari tanggal transaksi terakhir asli.
                 $user->save();
                 $downgraded++;
             }

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CheckoutRequest;
+use App\Http\Requests\UploadPaymentProofRequest;
 use App\Models\Order;
 use App\Models\PaymentProof;
 use App\Models\SystemSetting;
@@ -16,20 +18,11 @@ class OrderController extends Controller
 {
     /**
      * Create a new order (checkout).
+     * Validasi variant_id milik product_id ditangani oleh CheckoutRequest.
      */
-    public function checkout(Request $request, OrderService $orderService)
+    public function checkout(CheckoutRequest $request, OrderService $orderService)
     {
-        $validated = $request->validate([
-            'customer_info.name'        => 'required|string|max:255',
-            'customer_info.phone'       => 'required|string|max:20',
-            'customer_info.address'     => 'required|string|max:500',
-            'customer_info.city'        => 'required|string|max:100',
-            'customer_info.postal_code' => 'required|string|max:10',
-            'items'                     => 'required|array|min:1',
-            'items.*.product_id'        => 'required|integer|exists:products,id',
-            'items.*.variant_id'        => 'nullable|integer|exists:product_variants,id',
-            'items.*.quantity'          => 'required|integer|min:1',
-        ]);
+        $validated = $request->validated();
 
         try {
             $order = $orderService->createOrder(
@@ -39,10 +32,12 @@ class OrderController extends Controller
             );
 
             return response()->json([
-                'message'      => 'Pesanan berhasil dibuat.',
-                'order_number' => $order->order_number,
-                'order_id'     => $order->id,
-                'total'        => (float) $order->total,
+                'data' => [
+                    'message' => 'Pesanan berhasil dibuat.',
+                    'order_number' => $order->order_number,
+                    'order_id' => $order->id,
+                    'total' => (float) $order->total,
+                ],
             ], 201);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -73,44 +68,70 @@ class OrderController extends Controller
 
         // Get payment config
         $paymentConfig = [
-            'bank_name'      => SystemSetting::getValue('payment_bank_name', 'BCA'),
+            'bank_name' => SystemSetting::getValue('payment_bank_name', 'BCA'),
             'account_number' => SystemSetting::getValue('payment_account_number', '888888888'),
-            'account_name'   => SystemSetting::getValue('payment_account_name', 'PT BBK'),
+            'account_name' => SystemSetting::getValue('payment_account_name', 'PT BBK'),
         ];
 
         return response()->json([
-            'order'          => $order,
+            'order' => $order,
             'payment_config' => $paymentConfig,
         ]);
     }
 
     /**
      * Upload payment proof for an order.
+     *
+     * B5: Validasi MIME type ketat (jpg, png, pdf), max 2MB.
+     * File disimpan di private storage (storage/app/private/) agar tidak bisa diakses publik.
+     * Admin mengakses file melalui endpoint terpisah dengan otorisasi.
      */
-    public function uploadPaymentProof(Request $request, int $orderId)
+    public function uploadPaymentProof(UploadPaymentProofRequest $request, int $orderId)
     {
         $order = Order::where('id', $orderId)
             ->where('user_id', $request->user()->id)
             ->firstOrFail();
 
-        $request->validate([
-            'file' => 'required|file|mimes:jpg,jpeg,png,webp|max:5120', // 5MB
-        ]);
+        if (! in_array($order->status, ['pending_payment', 'processing'])) {
+            return response()->json([
+                'message' => 'Bukti pembayaran hanya bisa diunggah untuk order yang belum selesai.',
+            ], 422);
+        }
 
-        $path = $request->file('file')->store('payment-proofs', 'public');
+        // Simpan ke private storage — tidak bisa diakses via URL publik
+        $path = $request->file('file')->store('payment-proofs', 'local');
 
         $proof = PaymentProof::updateOrCreate(
             ['order_id' => $order->id],
             [
                 'file_path' => $path,
-                'status'    => 'pending',
+                'status' => 'pending',
             ]
         );
 
         return response()->json([
             'message' => 'Bukti pembayaran berhasil diunggah.',
-            'proof'   => $proof,
+            'data' => [
+                'proof_id' => $proof->id,
+                'status' => $proof->status,
+                'created_at' => $proof->created_at,
+            ],
         ]);
+    }
+
+    /**
+     * Serve payment proof file to admin (private storage access).
+     * Hanya admin yang bisa mengakses file ini — proteksi via EnsureIsAdmin middleware di route.
+     */
+    public function servePaymentProof(int $proofId)
+    {
+        $proof = PaymentProof::findOrFail($proofId);
+
+        if (! Storage::disk('local')->exists($proof->file_path)) {
+            return response()->json(['message' => 'File tidak ditemukan.'], 404);
+        }
+
+        return Storage::disk('local')->response($proof->file_path);
     }
 
     // ── Admin Endpoints ──
@@ -134,7 +155,7 @@ class OrderController extends Controller
     /**
      * Update order status (admin).
      */
-    public function updateStatus(Request $request, int $id, TierService $tierService, CommissionService $commissionService)
+    public function updateStatus(Request $request, int $id, TierService $tierService, CommissionService $commissionService, OrderService $orderService)
     {
         $order = Order::with('user')->findOrFail($id);
         $oldStatus = $order->status;
@@ -174,9 +195,14 @@ class OrderController extends Controller
             }
         }
 
+        // B4: Kembalikan stok jika order dibatalkan/ditolak dari status non-rejected
+        if ($newStatus === 'rejected' && $oldStatus !== 'rejected') {
+            $orderService->restoreStock($order);
+        }
+
         return response()->json([
-            'message' => 'Status pesanan berhasil diperbarui menjadi ' . $newStatus,
-            'order'   => $order->fresh()->load(['items', 'paymentProof']),
+            'message' => 'Status pesanan berhasil diperbarui menjadi '.$newStatus,
+            'order' => $order->fresh()->load(['items', 'paymentProof']),
         ]);
     }
 
@@ -190,11 +216,11 @@ class OrderController extends Controller
 
         $validated = $request->validate([
             'status' => 'required|in:approved,rejected',
-            'notes'  => 'nullable|string|max:500',
+            'notes' => 'nullable|string|max:500',
         ]);
 
         $proof->update([
-            'status'      => $validated['status'],
+            'status' => $validated['status'],
             'admin_notes' => $validated['notes'] ?? null,
             'reviewed_at' => now(),
         ]);
@@ -206,7 +232,7 @@ class OrderController extends Controller
 
         return response()->json([
             'message' => 'Review pembayaran berhasil.',
-            'proof'   => $proof,
+            'proof' => $proof,
         ]);
     }
 }

@@ -30,6 +30,17 @@ apiClient.interceptors.response.use(
             }
         }
 
+        // 403: Access forbidden
+        if (error.response?.status === 403) {
+            import('sweetalert2').then(({ default: Swal }) => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Akses Ditolak',
+                    text: 'Anda tidak memiliki izin untuk mengakses resource ini.'
+                });
+            });
+        }
+
         // 422: Validation errors → attach flat error messages to error object
         if (error.response?.status === 422) {
             const errors = error.response.data?.errors || {};
@@ -37,6 +48,17 @@ apiClient.interceptors.response.use(
             const firstMessages = Object.values(errors).map(msgs => msgs[0]);
             error.validationMessage = firstMessages.join('\n') || error.response.data?.message || 'Validasi gagal.';
             error.validationErrors = errors;
+        }
+
+        // 500+: Server error
+        if (error.response?.status >= 500) {
+            import('sweetalert2').then(({ default: Swal }) => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Server Error',
+                    text: 'Terjadi kesalahan di server. Silakan coba lagi nanti.'
+                });
+            });
         }
 
         return Promise.reject(error);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getTierProgress, TIER_CONFIG } from '../lib/tierUtils';
 import { Navigate, Link } from 'react-router-dom';
@@ -10,27 +10,27 @@ import ProfileCommissions from '../components/profile/ProfileCommissions';
 
 export default function Profile() {
     const { currentUser, userData, userRole } = useAuth();
-    const [timeLeft, setTimeLeft] = useState({ days: 30, text: '' });
     const [activeTab, setActiveTab] = useState('overview');
     const [showTierInfo, setShowTierInfo] = useState(false);
 
-    useEffect(() => {
-        if (userData && userRole !== 'starcenter' && userRole !== 'admin') {
-            // Backend returns ISO string (e.g. "2026-04-01T..."), not Firestore Timestamp
-            const rawDate = userData.last_transaction_at || userData.created_at;
-            const lastTx = rawDate ? new Date(rawDate) : new Date();
-            const now = new Date();
-            const diffDays = Math.ceil((now - lastTx) / (1000 * 60 * 60 * 24));
-            const remaining = 30 - diffDays;
-
-            let text = '';
-            if (remaining > 15) text = 'Aman! Transaksi terakhir kamu masih baru.';
-            else if (remaining > 5) text = 'Yuk belanja lagi untuk mempertahankan tier kamu!';
-            else if (remaining > 0) text = 'Gawat! Tier kamu akan turun sebentar lagi, buruan checkout!';
-            else text = 'Waktu habis, tier kamu sedang dievaluasi ulang.';
-
-            setTimeLeft({ days: Math.max(0, remaining), text });
+    // Hitung sisa waktu tier (computed dari userData, tidak perlu state terpisah)
+    const timeLeft = useMemo(() => {
+        if (!userData || userRole === 'starcenter' || userRole === 'admin') {
+            return { days: 30, text: '' };
         }
+        const rawDate = userData.last_transaction_at || userData.created_at;
+        const lastTx = rawDate ? new Date(rawDate) : new Date();
+        const now = new Date();
+        const diffDays = Math.ceil((now - lastTx) / (1000 * 60 * 60 * 24));
+        const remaining = 30 - diffDays;
+
+        let text = '';
+        if (remaining > 15) text = 'Aman! Transaksi terakhir kamu masih baru.';
+        else if (remaining > 5) text = 'Yuk belanja lagi untuk mempertahankan tier kamu!';
+        else if (remaining > 0) text = 'Gawat! Tier kamu akan turun sebentar lagi, buruan checkout!';
+        else text = 'Waktu habis, tier kamu sedang dievaluasi ulang.';
+
+        return { days: Math.max(0, remaining), text };
     }, [userData, userRole]);
 
     if (!currentUser) return <Navigate to="/login" replace />;

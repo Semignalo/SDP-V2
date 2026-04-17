@@ -37,8 +37,20 @@ export const getEligibleTier = (cumulativeSpending) => {
 // Lazy check for downgrade on inactive days (30 days)
 export const checkDowngradeLogic = (user) => {
     if (user.role === 'starcenter') return null; // Starcenter is locked
-    
-    const lastTx = user.lastTransactionDate?.toDate ? user.lastTransactionDate.toDate() : user.createdAt?.toDate ? user.createdAt.toDate() : new Date();
+
+    // Handle both Firestore Timestamps and regular Date objects
+    let lastTx;
+    if (user.lastTransactionDate) {
+        lastTx = typeof user.lastTransactionDate === 'string'
+            ? new Date(user.lastTransactionDate)
+            : new Date(user.lastTransactionDate);
+    } else if (user.createdAt) {
+        lastTx = typeof user.createdAt === 'string'
+            ? new Date(user.createdAt)
+            : new Date(user.createdAt);
+    } else {
+        lastTx = new Date();
+    }
     const now = new Date();
     const diffTime = Math.abs(now - lastTx);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));

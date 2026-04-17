@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { networkApi } from '../../api/networkApi';
 import { Wallet, Clock, CheckCircle, Search, DollarSign } from 'lucide-react';
-import { getErrorMessage } from '../../api/client';
+// import { getErrorMessage } from '../../api/client';
 
 export default function ProfileCommissions() {
     const [data, setData] = useState(null);

@@ -1,0 +1,1 @@
+- [SDP-V2 Project Status](project_sdpv2_status.md) — status project per 2026-04-16: Backend Phase 0+1 selesai, Frontend Phase 0+2 selesai, UI/UX Phase 0 selesai; pending test suite & CI/CD

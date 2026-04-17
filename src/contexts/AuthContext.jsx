@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from 'react';
 import { authApi } from '../api/authApi';
 
@@ -84,6 +85,30 @@ export function AuthProvider({ children }) {
             setLoading(false);
         };
         fetchProfile();
+
+        // Re-validate token when user returns to tab after being away
+        const handleVisibilityChange = async () => {
+            if (document.visibilityState === 'visible') {
+                const token = localStorage.getItem('auth_token');
+                if (token) {
+                    try {
+                        const data = await authApi.getProfile();
+                        setCurrentUser(data.user);
+                        setUserData(data.user);
+                        setUserRole(data.user.role || 'regular');
+                    } catch (error) {
+                        console.error("Token re-validation failed", error);
+                        localStorage.removeItem('auth_token');
+                        setCurrentUser(null);
+                        setUserData(null);
+                        setUserRole(null);
+                    }
+                }
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, []);
 
     const value = {

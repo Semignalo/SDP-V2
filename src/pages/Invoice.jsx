@@ -47,6 +47,21 @@ export default function Invoice() {
 
     const handleUploadProof = async (file) => {
         if (!file || !order) return;
+
+        // Validate file size (max 2MB)
+        const MAX_SIZE = 2 * 1024 * 1024;
+        if (file.size > MAX_SIZE) {
+            Swal.fire('Ukuran File Terlalu Besar', 'File harus maksimal 2MB. File Anda berukuran ' + (file.size / 1024 / 1024).toFixed(2) + 'MB.', 'error');
+            return;
+        }
+
+        // Validate file type
+        const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            Swal.fire('Format File Tidak Didukung', 'File harus berupa JPG, PNG, atau PDF.', 'error');
+            return;
+        }
+
         setUploadingProof(true);
         try {
             await orderApi.uploadPaymentProof(order.id, file);
@@ -69,8 +84,8 @@ export default function Invoice() {
         : proofStatus === 'rejected' ? 'text-red-600 bg-red-100'
         : 'text-orange-600 bg-orange-100';
 
-    // Storage base URL
-    const storageUrl = import.meta.env.VITE_STORAGE_URL || 'http://localhost:8000/storage';
+    // Storage base URL (digunakan untuk konstruksi URL gambar bukti bayar)
+    const _storageUrl = import.meta.env.VITE_STORAGE_URL || 'http://localhost:8000/storage';
 
     const handlePrint = () => {
         window.print();
@@ -96,10 +111,10 @@ export default function Invoice() {
 
     return (
         <div className="container mx-auto px-4 py-12 md:py-20 flex justify-center">
-            <div className="w-full max-w-xl bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+            <div className="invoice-print-wrapper w-full max-w-xl bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
 
                 {/* Header */}
-                <div className="bg-[#047857] p-8 text-center text-white">
+                <div className="invoice-print-header bg-[#047857] p-8 text-center text-white">
                     <CheckCircle className="mx-auto h-16 w-16 mb-4 text-green-300" />
                     <h1 className="text-3xl font-serif mb-2">Order Dibuat!</h1>
                     <p className="text-green-100">Silakan selesaikan pembayaran agar pesanan Anda dapat segera kami proses.</p>
@@ -199,7 +214,7 @@ export default function Invoice() {
                             <p className="text-xs text-gray-500 mb-4">Pastikan nominal transfer sesuai. Tim kami akan verifikasi max. 1×24 jam.</p>
                             <input
                                 type="file"
-                                accept="image/jpeg,image/png,image/webp"
+                                accept="image/jpeg,image/png,application/pdf"
                                 id="paymentProofInvoice"
                                 className="hidden"
                                 onChange={(e) => handleUploadProof(e.target.files[0])}
@@ -232,12 +247,7 @@ export default function Invoice() {
                 </div>
             </div>
             
-            {/* Global style to hide the print button locally */}
-            <style>{`
-                @media print {
-                    .print\\:hidden { display: none !important; }
-                }
-            `}</style>
+            {/* Print styles handled globally in index.css */}
         </div>
     );
 }

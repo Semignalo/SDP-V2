@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { networkApi } from '../../api/networkApi';
-import { Share2, Users, Copy, CheckCircle, TrendingUp, Search, Network, Table } from 'lucide-react';
+import { Share2, Users, Copy, TrendingUp, Search, Network, Table, MessageCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
-import { getErrorMessage } from '../../api/client';
+// import { getErrorMessage } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import NetworkTree from './NetworkTree';
 
@@ -92,13 +92,43 @@ export default function ProfileNetwork() {
                                 <div className="bg-black/30 border border-white/10 px-4 py-2.5 rounded-xl text-sm text-gray-300 truncate flex-1">
                                     {network?.referral_url}
                                 </div>
-                                <button 
+                                <button
                                     onClick={() => handleCopy(network?.referral_url, 'Link Referral')}
                                     className="bg-black/50 text-white p-3 rounded-xl hover:bg-black/70 transition border border-white/10 active:scale-95 flex-shrink-0"
+                                    title="Salin link"
                                 >
                                     <Copy size={20} />
                                 </button>
+                                <a
+                                    href={`https://wa.me/?text=${encodeURIComponent(`Bergabunglah bersama saya di SDP! Daftar dengan link referral saya: ${network?.referral_url}`)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="bg-green-600 text-white p-3 rounded-xl hover:bg-green-500 transition active:scale-95 flex-shrink-0"
+                                    title="Bagikan via WhatsApp"
+                                >
+                                    <MessageCircle size={20} />
+                                </a>
                             </div>
+                        </div>
+
+                        {/* Share actions row */}
+                        <div className="flex items-center gap-2 mt-2 relative z-10">
+                            <button
+                                onClick={() => {
+                                    if (navigator.share) {
+                                        navigator.share({
+                                            title: 'Bergabung di SDP',
+                                            text: `Daftar dengan kode referral saya: ${network?.referral_code}`,
+                                            url: network?.referral_url,
+                                        }).catch(() => {});
+                                    } else {
+                                        handleCopy(network?.referral_url, 'Link Referral');
+                                    }
+                                }}
+                                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs px-3 py-2 rounded-lg transition active:scale-95"
+                            >
+                                <Share2 size={14} /> Bagikan Link
+                            </button>
                         </div>
                     </div>
                 </div>
