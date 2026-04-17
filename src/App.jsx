@@ -23,6 +23,7 @@ const AdminPaymentSettings = lazy(() => import('./pages/admin/PaymentSettings'))
 const AdminOrders = lazy(() => import('./pages/admin/Orders'));
 const AdminProducts = lazy(() => import('./pages/admin/Products'));
 const AdminUsers = lazy(() => import('./pages/admin/Users'));
+const AdminUserDetail = lazy(() => import('./pages/admin/UserDetail'));
 const AdminCommissions = lazy(() => import('./pages/admin/Commissions'));
 const AdminTiers = lazy(() => import('./pages/admin/Tiers'));
 
@@ -54,6 +55,7 @@ function App() {
           <Route path="orders" element={<AdminOrders />} />
           <Route path="products" element={<AdminProducts />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="users/:id" element={<AdminUserDetail />} />
           <Route path="commissions" element={<AdminCommissions />} />
           <Route path="tiers" element={<AdminTiers />} />
         </Route>

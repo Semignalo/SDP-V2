@@ -33,6 +33,24 @@ export const adminApi = {
         return response.data;
     },
 
+    updateUserPassword: async (id, password, passwordConfirmation) => {
+        const response = await apiClient.put(`/admin/users/${id}/password`, {
+            password,
+            password_confirmation: passwordConfirmation
+        });
+        return response.data;
+    },
+
+    updateUserTier: async (id, tierId) => {
+        const response = await apiClient.put(`/admin/users/${id}/tier`, { tier_id: tierId });
+        return response.data;
+    },
+
+    getUserCommissions: async (id, page = 1) => {
+        const response = await apiClient.get(`/admin/users/${id}/commissions`, { params: { page } });
+        return response.data;
+    },
+
     bulkPayCommissions: async (commissionIds) => {
         const response = await apiClient.post('/admin/commissions/bulk-pay', { commission_ids: commissionIds });
         return response.data;

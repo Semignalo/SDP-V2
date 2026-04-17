@@ -114,7 +114,47 @@ class AdminController extends Controller
             $q->orderBy('created_at', 'desc')->limit(20);
         }])->findOrFail($id);
 
-        return response()->json($user);
+        // Get network info if starcenter
+        $network = null;
+        if ($user->role === 'starcenter') {
+            $network = $this->getUserNetwork($id);
+        }
+
+        return response()->json([
+            'user' => $user,
+            'network' => $network,
+        ]);
+    }
+
+    /**
+     * Get user's downline/upline network tree.
+     */
+    private function getUserNetwork($userId)
+    {
+        $user = User::findOrFail($userId);
+
+        // Get uplines (ancestors)
+        $uplines = DB::table('starcenter_network')
+            ->where('downline_id', $userId)
+            ->where('depth', '>', 0)
+            ->join('users', 'starcenter_network.upline_id', '=', 'users.id')
+            ->select('users.id', 'users.name', 'users.email', 'starcenter_network.depth')
+            ->orderBy('starcenter_network.depth')
+            ->get();
+
+        // Get downlines (descendants)
+        $downlines = DB::table('starcenter_network')
+            ->where('upline_id', $userId)
+            ->join('users', 'starcenter_network.downline_id', '=', 'users.id')
+            ->select('users.id', 'users.name', 'users.email', 'starcenter_network.depth')
+            ->orderBy('starcenter_network.depth')
+            ->get();
+
+        return [
+            'uplines' => $uplines,
+            'downlines' => $downlines,
+            'total_downlines' => $downlines->count(),
+        ];
     }
 
     /**
@@ -148,6 +188,62 @@ class AdminController extends Controller
             'message' => "Role berhasil diubah menjadi {$newRole}.",
             'user'    => $user->load('tier'),
         ]);
+    }
+
+    /**
+     * Update user password (admin action).
+     */
+    public function updateUserPassword(Request $request, int $id)
+    {
+        $user = User::findOrFail($id);
+
+        $validated = $request->validate([
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user->update([
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        return response()->json([
+            'message' => 'Password user berhasil diubah.',
+            'user' => $user,
+        ]);
+    }
+
+    /**
+     * Update user tier (admin action).
+     */
+    public function updateUserTier(Request $request, int $id)
+    {
+        $user = User::findOrFail($id);
+
+        $validated = $request->validate([
+            'tier_id' => 'required|exists:tiers,id',
+        ]);
+
+        $tier = Tier::findOrFail($validated['tier_id']);
+        $user->update(['tier_id' => $tier->id]);
+
+        return response()->json([
+            'message' => "Tier user berhasil diubah menjadi {$tier->name}.",
+            'user' => $user->load('tier'),
+        ]);
+    }
+
+    /**
+     * Get user commissions (admin view).
+     */
+    public function getUserCommissions(Request $request, int $id)
+    {
+        $user = User::findOrFail($id);
+
+        $commissions = Commission::with(['order', 'sourceUser'])
+            ->where('user_id', $id)
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        return response()->json($commissions);
     }
 
     /**

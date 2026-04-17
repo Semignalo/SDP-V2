@@ -95,6 +95,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/users', [AdminController::class, 'users']);
         Route::get('/users/{id}', [AdminController::class, 'showUser']);
         Route::put('/users/{id}/role', [AdminController::class, 'updateUserRole']);
+        Route::put('/users/{id}/password', [AdminController::class, 'updateUserPassword']);
+        Route::put('/users/{id}/tier', [AdminController::class, 'updateUserTier']);
+        Route::get('/users/{id}/commissions', [AdminController::class, 'getUserCommissions']);
 
         // Commissions
         Route::get('/commissions', [AdminController::class, 'commissions']);

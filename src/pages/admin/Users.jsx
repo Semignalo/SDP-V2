@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { adminApi } from '../../api/adminApi';
 import { Edit2, Search, UserCheck, UserX, Shield, Crown, User as UserIcon, Eye, X } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 export default function Users() {
+    const navigate = useNavigate();
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    
-    // Modal state
-    const [selectedUser, setSelectedUser] = useState(null);
-    const [detailLoading, setDetailLoading] = useState(false);
 
     const fetchUsers = async () => {
         try {
@@ -65,19 +63,8 @@ export default function Users() {
         }
     };
 
-    const handleViewDetail = async (user) => {
-        setDetailLoading(true);
-        setSelectedUser({ ...user, fetchedDetails: null });
-        try {
-            const data = await adminApi.getUserDetail(user.id);
-            setSelectedUser({ ...user, fetchedDetails: data });
-        } catch (e) {
-            console.error("Error fetching detail", e);
-            Swal.fire('Error', 'Gagal mengambil detail.', 'error');
-            setSelectedUser(null);
-        } finally {
-            setDetailLoading(false);
-        }
+    const handleViewDetail = (user) => {
+        navigate(`/admin/users/${user.id}`);
     }
 
     const getRoleBadge = (user) => {
@@ -211,96 +198,6 @@ export default function Users() {
                 )}
             </div>
 
-            {/* User Detail Modal */}
-            {selectedUser && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
-                        <div className="flex justify-between items-center p-6 border-b border-gray-100">
-                            <h2 className="text-xl font-bold flex items-center gap-2">
-                                <UserIcon className="text-blue-500" /> Detail Pengguna
-                            </h2>
-                            <button onClick={() => setSelectedUser(null)} className="text-gray-400 hover:text-gray-600">
-                                <X size={24} />
-                            </button>
-                        </div>
-                        
-                        <div className="flex-1 overflow-y-auto p-6">
-                            {detailLoading || !selectedUser.fetchedDetails ? (
-                                <div className="py-20 text-center text-gray-500">Memuat detail riwayat pelanggan...</div>
-                            ) : (
-                                <div className="space-y-6">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <p className="text-sm text-gray-500">Nama</p>
-                                            <p className="font-bold">{selectedUser.fetchedDetails.name}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-gray-500">Email</p>
-                                            <p className="font-bold">{selectedUser.fetchedDetails.email}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-gray-500">Phone</p>
-                                            <p className="font-bold">{selectedUser.fetchedDetails.phone || '-'}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-gray-500">Referrer (Upline)</p>
-                                            <p className="font-bold text-blue-600">{selectedUser.fetchedDetails.referrer?.name || 'Tidak ada'}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-gray-500">Role / Auth</p>
-                                            <div>{getRoleBadge(selectedUser.fetchedDetails)}</div>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-gray-500">Tier Aktif</p>
-                                            <div className="mt-1">{getTierBadge(selectedUser.fetchedDetails.tier?.slug)}</div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="border-t border-gray-100 pt-6"></div>
-
-                                    <div>
-                                        <h3 className="font-bold text-gray-800 mb-4">Riwayat Pesanan (20 Terakhir)</h3>
-                                        {selectedUser.fetchedDetails.orders?.length === 0 ? (
-                                            <p className="text-sm text-gray-500 italic">Belum ada riwayat pesanan.</p>
-                                        ) : (
-                                            <div className="border rounded-lg overflow-hidden shrink-0">
-                                                <table className="w-full text-sm text-left">
-                                                    <thead className="bg-gray-50">
-                                                        <tr>
-                                                            <th className="px-4 py-2">ID</th>
-                                                            <th className="px-4 py-2">Tanggal</th>
-                                                            <th className="px-4 py-2 text-right">Total</th>
-                                                            <th className="px-4 py-2">Status</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-gray-100">
-                                                        {selectedUser.fetchedDetails.orders?.map(order => (
-                                                            <tr key={order.id} className="hover:bg-gray-50">
-                                                                <td className="px-4 py-2 font-medium">{order.order_number}</td>
-                                                                <td className="px-4 py-2 text-gray-600">
-                                                                    {new Date(order.created_at).toLocaleDateString()}
-                                                                </td>
-                                                                <td className="px-4 py-2 text-right font-bold whitespace-nowrap">
-                                                                    Rp {Number(order.total).toLocaleString('id-ID')}
-                                                                </td>
-                                                                <td className="px-4 py-2">
-                                                                    <span className="text-[10px] uppercase font-bold text-gray-600 bg-gray-100 px-2 flex py-0.5 w-max">
-                                                                        {order.status}
-                                                                    </span>
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
 
         </div>
     );

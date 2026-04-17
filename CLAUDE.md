@@ -73,10 +73,46 @@ Three roles: `regular`, `starcenter`, `admin`
 `StarcenterNetwork` table uses a closure-table adjacency structure with a `depth` column (1–7) to track upline chains. `CommissionService::distribute()` is called after order completion and walks the tree to assign commission records.
 
 ### Key Data Models
-- **User**: `referrer_id`, `referral_code` (unique 8-char), `tier_id`, `role`, `cumulative_spending`
-- **Order**: `order_number` (INV-XXXXXXXX), `status` (`pending_payment` → `awaiting_confirmation` → `completed`/`cancelled`)
+- **User**: `referrer_id`, `referral_code` (unique 8-char), `tier_id`, `role`, `cumulative_spending`, `password`, `email`
+- **Order**: `order_number` (INV-XXXXXXXX), `status` (`pending_payment` → `processing` → `shipped`/`completed`/`rejected`), `tracking_number`
 - **Commission**: `level` (1–7), `status` (`pending`/`paid`/`cancelled`), linked to User + Order + SourceUser
 - **Tier**: `min_spend`, discount percentage; tiers auto-upgrade based on cumulative spending
+- **StarcenterNetwork**: closure-table with `upline_id`, `downline_id`, `depth` (1–7)
+
+## Admin Features
+
+### User Management (`/admin/users`)
+Admin dapat mengelola user account secara penuh:
+- **View User Detail** — lihat semua info profil, tier, cumulative spending, role
+- **View User Network** — lihat downline/upline tree dari user (untuk starcenter)
+- **Edit User Password** — admin bisa reset password user (security: require confirmation)
+- **Edit User Role** — ubah role user (regular → starcenter → admin)
+- **Edit User Tier** — manual adjust tier jika diperlukan (untuk testing atau escalation)
+- **View User Orders** — lihat history order dari user
+- **View User Commissions** — lihat commission history dari user
+
+**Backend Endpoints:**
+- `GET /admin/users/{id}` — user detail + network + orders + commissions
+- `PUT /admin/users/{id}/password` — update user password (admin action, needs confirmation)
+- `PUT /admin/users/{id}/role` — change user role
+- `PUT /admin/users/{id}/tier` — manual tier adjustment (admin only)
+- `GET /admin/users/{id}/network` — view user's downline/upline tree
+- `GET /admin/users/{id}/orders` — user's order history
+- `GET /admin/users/{id}/commissions` — user's commission history
+
+### Order Management (`/admin/orders`)
+- Full order lifecycle management with status changes
+- Payment proof review (approve/reject with notes)
+- Tracking number input for shipped orders
+- Order export with filters (status, date range)
+- Pagination support (30 items per page)
+
+### Dashboard (`/admin`)
+- Revenue stats + monthly charts
+- Active orders, pending payments count
+- Commission stats (pending, paid)
+- Top 5 products by sales
+- Recent orders snapshot
 
 ## Environment Configuration
 
@@ -89,5 +125,22 @@ VITE_STORAGE_URL=http://localhost:8000/storage
 ### Backend (`starinc-api/.env`, based on `.env.example`)
 Key settings: `DB_CONNECTION=sqlite`, `QUEUE_CONNECTION=database`, `CACHE_STORE=database`. SQLite database is at `starinc-api/database/database.sqlite`.
 
-## Deployment
-Frontend is deployed to Firebase Hosting (project `sdp-v2-553c0`). The `firebase.json` configures SPA routing rewrites.
+## Development Setup
+
+**See `LOCAL_SETUP.md` for complete local development guide (100% local, no Firebase).**
+
+Key commands:
+```bash
+# Backend startup
+cd starinc-api && php artisan migrate:fresh --seed && php artisan serve
+
+# Frontend startup
+npm run dev
+
+# Test API
+curl http://localhost:8000/api/tiers
+```
+
+Default test credentials:
+- Admin: `admin@sdp.com` / `password123`
+- Starcenter: `center.pusat@starinc.com` / `password123`
