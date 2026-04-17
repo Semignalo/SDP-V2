@@ -147,6 +147,14 @@ class OrderController extends Controller
             $query->where('status', $request->status);
         }
 
+        if ($request->has('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->has('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
         $orders = $query->orderBy('created_at', 'desc')->paginate(30);
 
         return response()->json($orders);
@@ -233,6 +241,29 @@ class OrderController extends Controller
         return response()->json([
             'message' => 'Review pembayaran berhasil.',
             'proof' => $proof,
+        ]);
+    }
+
+    /**
+     * Update tracking number for shipped order (admin).
+     */
+    public function updateTracking(Request $request, int $id)
+    {
+        $order = Order::findOrFail($id);
+
+        $validated = $request->validate([
+            'tracking_number' => 'required|string|max:100',
+            'shipping_provider' => 'nullable|string|max:50',
+        ]);
+
+        $order->update([
+            'tracking_number' => $validated['tracking_number'],
+            'shipping_provider' => $validated['shipping_provider'] ?? null,
+        ]);
+
+        return response()->json([
+            'message' => 'Nomor resi berhasil diperbarui.',
+            'order' => $order->fresh()->load(['items', 'paymentProof']),
         ]);
     }
 }

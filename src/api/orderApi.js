@@ -44,5 +44,13 @@ export const adminOrderApi = {
     reviewPayment: async (id, status, notes = '') => {
         const response = await apiClient.put(`/admin/orders/${id}/payment`, { status, notes });
         return response.data;
+    },
+
+    updateTracking: async (id, trackingNumber, shippingProvider = '') => {
+        const response = await apiClient.put(`/admin/orders/${id}/tracking`, {
+            tracking_number: trackingNumber,
+            shipping_provider: shippingProvider
+        });
+        return response.data;
     }
 };

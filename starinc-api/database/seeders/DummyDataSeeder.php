@@ -13,116 +13,231 @@ use App\Services\OrderService;
 use App\Services\CommissionService;
 use App\Services\TierService;
 use App\Models\Tier;
+use Carbon\Carbon;
 
 class DummyDataSeeder extends Seeder
 {
     public function run(OrderService $orderService, CommissionService $commissionService, TierService $tierService): void
     {
-        // 1. Get or create Starcenter tier (assume diamond is ID 5, or just query it)
-        $diamondTier = Tier::where('slug', 'diamond')->first();
-        if (!$diamondTier) {
-            $diamondTier = Tier::create(['name' => 'Diamond', 'slug' => 'diamond', 'discount_percent' => 20, 'min_spend' => 50000000, 'sort_order' => 5]);
-        }
-
-        // 2. Create Starcenter Account
-        $starcenter = User::firstOrCreate(
-            ['email' => 'starcenter@starinc.com'],
-            [
-                'name' => 'Distributor Utama',
-                'password' => Hash::make('password123'),
-                'phone' => '08111111111',
-                'role' => 'starcenter',
-                'tier_id' => $diamondTier->id,
-                'referral_code' => 'STAR123',
-            ]
-        );
-
-        // 3. Create dummy products
-        $products = [];
-        $productData = [
-            ['title' => 'Starinc Whitening Serum', 'price' => 150000, 'category' => 'Skincare'],
-            ['title' => 'Starinc Night Cream', 'price' => 120000, 'category' => 'Skincare'],
-            ['title' => 'Starinc Facial Wash', 'price' => 80000, 'category' => 'Skincare']
+        // Get tiers
+        $tiers = [
+            'bronze' => Tier::where('slug', 'bronze')->first(),
+            'silver' => Tier::where('slug', 'silver')->first(),
+            'gold' => Tier::where('slug', 'gold')->first(),
+            'platinum' => Tier::where('slug', 'platinum')->first(),
+            'diamond' => Tier::where('slug', 'diamond')->first(),
         ];
 
+        // Create 20+ products
+        $products = $this->createProducts();
+
+        // Create SDP admin account (if not exists)
+        $admin = User::where('email', 'admin@sdp.com')->first();
+
+        // Create Starcenter accounts (multiple)
+        $centers = $this->createStarcenters($tiers);
+
+        // Create multi-level network
+        $allUsers = $this->createNetwork($centers, $tiers);
+
+        // Create many orders with different statuses
+        $this->createOrders($allUsers, $products, $orderService, $commissionService, $tierService);
+    }
+
+    private function createProducts(): array
+    {
+        $productData = [
+            ['title' => 'Starinc Whitening Serum', 'price' => 150000, 'category' => 'Skincare', 'desc' => 'Premium whitening serum'],
+            ['title' => 'Starinc Night Cream', 'price' => 120000, 'category' => 'Skincare', 'desc' => 'Night recovery cream'],
+            ['title' => 'Starinc Facial Wash', 'price' => 80000, 'category' => 'Skincare', 'desc' => 'Gentle facial cleanser'],
+            ['title' => 'Starinc Toner', 'price' => 95000, 'category' => 'Skincare', 'desc' => 'Balancing toner'],
+            ['title' => 'Starinc Eye Cream', 'price' => 180000, 'category' => 'Skincare', 'desc' => 'Anti-aging eye cream'],
+            ['title' => 'Starinc Mask', 'price' => 110000, 'category' => 'Skincare', 'desc' => 'Sheet mask pack'],
+            ['title' => 'Starinc Sunscreen SPF50', 'price' => 125000, 'category' => 'Skincare', 'desc' => 'UV protection'],
+            ['title' => 'Starinc Lip Balm', 'price' => 60000, 'category' => 'Lip Care', 'desc' => 'Moisturizing lip balm'],
+            ['title' => 'Starinc Hair Serum', 'price' => 140000, 'category' => 'Hair Care', 'desc' => 'Hair strengthening serum'],
+            ['title' => 'Starinc Shampoo', 'price' => 85000, 'category' => 'Hair Care', 'desc' => 'Keratin shampoo'],
+            ['title' => 'Starinc Conditioner', 'price' => 85000, 'category' => 'Hair Care', 'desc' => 'Deep conditioning treatment'],
+            ['title' => 'Starinc Body Lotion', 'price' => 100000, 'category' => 'Body Care', 'desc' => 'Moisturizing body lotion'],
+            ['title' => 'Starinc Hand Cream', 'price' => 75000, 'category' => 'Body Care', 'desc' => 'Anti-aging hand care'],
+            ['title' => 'Starinc Bath Bomb', 'price' => 45000, 'category' => 'Bath & Spa', 'desc' => 'Aromatic bath bomb'],
+            ['title' => 'Starinc Face Mist', 'price' => 70000, 'category' => 'Skincare', 'desc' => 'Hydrating face mist'],
+            ['title' => 'Starinc Vitamin C Essence', 'price' => 160000, 'category' => 'Skincare', 'desc' => 'Brightening essence'],
+            ['title' => 'Starinc Hyaluronic Serum', 'price' => 135000, 'category' => 'Skincare', 'desc' => 'Deep hydration serum'],
+            ['title' => 'Starinc Peptide Cream', 'price' => 175000, 'category' => 'Skincare', 'desc' => 'Anti-wrinkle peptide cream'],
+            ['title' => 'Starinc Sleeping Mask', 'price' => 130000, 'category' => 'Skincare', 'desc' => 'Overnight treatment mask'],
+            ['title' => 'Starinc Facial Oil', 'price' => 145000, 'category' => 'Skincare', 'desc' => 'Luxurious facial oil'],
+            ['title' => 'Starinc Cleansing Balm', 'price' => 115000, 'category' => 'Skincare', 'desc' => 'Make-up remover balm'],
+            ['title' => 'Starinc Exfoliator', 'price' => 90000, 'category' => 'Skincare', 'desc' => 'Gentle exfoliating scrub'],
+        ];
+
+        $products = [];
         foreach ($productData as $pd) {
             $products[] = Product::firstOrCreate(
                 ['title' => $pd['title']],
                 [
-                    'description' => 'Dummy description for ' . $pd['title'],
+                    'description' => $pd['desc'],
                     'price' => $pd['price'],
                     'category' => $pd['category'],
                 ]
             );
         }
+        return $products;
+    }
 
-        // 4. Create downlines
-        $downlines = [];
-        for ($i = 1; $i <= 3; $i++) {
-            $downline = User::firstOrCreate(
-                ['email' => "downline{$i}@example.com"],
+    private function createStarcenters($tiers): array
+    {
+        $centers = [];
+        $centerData = [
+            ['name' => 'PT Starinc Pusat', 'email' => 'center.pusat@starinc.com', 'phone' => '08111111111', 'code' => 'CENTER01'],
+            ['name' => 'Distributor Jakarta', 'email' => 'center.jakarta@starinc.com', 'phone' => '08112222222', 'code' => 'CENTER02'],
+            ['name' => 'Distributor Bandung', 'email' => 'center.bandung@starinc.com', 'phone' => '08113333333', 'code' => 'CENTER03'],
+            ['name' => 'Distributor Surabaya', 'email' => 'center.surabaya@starinc.com', 'phone' => '08114444444', 'code' => 'CENTER04'],
+        ];
+
+        foreach ($centerData as $data) {
+            $center = User::firstOrCreate(
+                ['email' => $data['email']],
                 [
-                    'name' => "Downline {$i}",
+                    'name' => $data['name'],
                     'password' => Hash::make('password123'),
-                    'phone' => "0822222222{$i}",
-                    'role' => 'regular',
-                    'referrer_id' => $starcenter->id,
+                    'phone' => $data['phone'],
+                    'role' => 'starcenter',
+                    'tier_id' => $tiers['diamond']->id,
+                    'referral_code' => $data['code'],
                 ]
             );
-
-            // Populate Network
-            StarcenterNetwork::firstOrCreate([
-                'upline_id' => $starcenter->id,
-                'downline_id' => $downline->id,
-                'depth' => 1
-            ]);
-            $downlines[] = $downline;
+            $centers[] = $center;
         }
+        return $centers;
+    }
 
-        // 5. Create orders for downlines
-        foreach ($downlines as $index => $downline) {
-            $customerInfo = [
-                'name' => $downline->name,
-                'phone' => $downline->phone,
-                'address' => 'Jl. Dummy No. ' . $index,
-                'city' => 'Jakarta',
-                'postal_code' => '10000'
-            ];
+    private function createNetwork($centers, $tiers): array
+    {
+        $allUsers = $centers;
 
-            // Mix the items
-            $items = [
-                [
-                    'product_id' => $products[0]->id,
-                    'quantity' => 2
-                ],
-                [
-                    'product_id' => $products[1]->id,
-                    'quantity' => 1
-                ]
-            ];
+        foreach ($centers as $center) {
+            // Each center has multiple downlines (level 1)
+            for ($i = 1; $i <= 8; $i++) {
+                $downline1 = User::firstOrCreate(
+                    ['email' => "downline.l1.{$center->id}.{$i}@example.com"],
+                    [
+                        'name' => $center->name . " - Downline L1 #{$i}",
+                        'password' => Hash::make('password123'),
+                        'phone' => '08120000000' . str_pad($i, 3, '0', STR_PAD_LEFT),
+                        'role' => 'regular',
+                        'referrer_id' => $center->id,
+                        'tier_id' => $tiers['silver']->id,
+                    ]
+                );
+                StarcenterNetwork::firstOrCreate([
+                    'upline_id' => $center->id,
+                    'downline_id' => $downline1->id,
+                    'depth' => 1
+                ]);
+                $allUsers[] = $downline1;
+
+                // Each level 1 has 2-3 level 2 downlines
+                for ($j = 1; $j <= rand(2, 3); $j++) {
+                    $downline2 = User::firstOrCreate(
+                        ['email' => "downline.l2.{$downline1->id}.{$j}@example.com"],
+                        [
+                            'name' => $downline1->name . " - L2 #{$j}",
+                            'password' => Hash::make('password123'),
+                            'phone' => '08130000000' . str_pad($j, 3, '0', STR_PAD_LEFT),
+                            'role' => 'regular',
+                            'referrer_id' => $downline1->id,
+                        ]
+                    );
+                    StarcenterNetwork::firstOrCreate([
+                        'upline_id' => $downline1->id,
+                        'downline_id' => $downline2->id,
+                        'depth' => 2
+                    ]);
+                    StarcenterNetwork::firstOrCreate([
+                        'upline_id' => $center->id,
+                        'downline_id' => $downline2->id,
+                        'depth' => 2
+                    ]);
+                    $allUsers[] = $downline2;
+                }
+            }
+        }
+        return $allUsers;
+    }
+
+    private function createOrders($users, $products, OrderService $orderService, CommissionService $commissionService, TierService $tierService): void
+    {
+        $statuses = ['pending_payment', 'processing', 'shipped', 'completed', 'rejected'];
+        $now = Carbon::now();
+
+        // Create 100+ orders distributed over last 3 months
+        for ($i = 0; $i < 120; $i++) {
+            // Pick random user (skip first few admin users)
+            $user = $users[rand(4, count($users) - 1)];
+
+            // Random date in last 3 months
+            $orderDate = $now->copy()->subDays(rand(0, 90));
+
+            // Random items
+            $itemCount = rand(1, 4);
+            $items = [];
+            for ($j = 0; $j < $itemCount; $j++) {
+                $items[] = [
+                    'product_id' => $products[rand(0, count($products) - 1)]->id,
+                    'quantity' => rand(1, 3)
+                ];
+            }
 
             // Create order
-            $order = $orderService->createOrder($downline, $customerInfo, $items);
+            $customerInfo = [
+                'name' => $user->name,
+                'phone' => $user->phone,
+                'address' => 'Jl. Dummy No. ' . rand(1, 999),
+                'city' => ['Jakarta', 'Bandung', 'Surabaya', 'Medan', 'Yogyakarta'][rand(0, 4)],
+                'postal_code' => '1000' . str_pad(rand(0, 999), 2, '0', STR_PAD_LEFT)
+            ];
 
-            // Add payment proof
-            PaymentProof::create([
-                'order_id' => $order->id,
-                'file_path' => 'dummy/proof.jpg',
-                'status' => 'approved',
-                'reviewed_at' => now(),
-            ]);
+            $order = $orderService->createOrder($user, $customerInfo, $items);
+            $order->update(['created_at' => $orderDate, 'updated_at' => $orderDate]);
 
-            // Complete the order
-            $order->update(['status' => 'completed']);
-            
-            // Add to cumulative spending
-            $productSpend = $order->subtotal - $order->discount_amount;
-            $downline->increment('cumulative_spending', $productSpend);
-            $downline->update(['last_transaction_at' => now()]);
+            // 70% completed, 15% processing/shipped, 10% pending, 5% rejected
+            $rand = rand(1, 100);
+            if ($rand <= 70) {
+                $status = 'completed';
+            } elseif ($rand <= 85) {
+                $status = ['processing', 'shipped'][rand(0, 1)];
+            } elseif ($rand <= 95) {
+                $status = 'pending_payment';
+            } else {
+                $status = 'rejected';
+            }
 
-            // Evaluate tier & Distribute
-            $tierService->evaluateUpgrade($downline->fresh());
-            $commissionService->distribute($order);
+            if ($status === 'completed') {
+                // Add payment proof
+                PaymentProof::create([
+                    'order_id' => $order->id,
+                    'file_path' => 'dummy/proof' . rand(1, 5) . '.jpg',
+                    'status' => 'approved',
+                    'reviewed_at' => $orderDate,
+                    'created_at' => $orderDate->copy()->addHours(2),
+                ]);
+
+                $order->update(['status' => 'completed']);
+
+                // Update cumulative spending
+                $productSpend = $order->subtotal - $order->discount_amount;
+                $user->increment('cumulative_spending', $productSpend);
+                $user->update(['last_transaction_at' => $orderDate]);
+
+                // Evaluate tier
+                $tierService->evaluateUpgrade($user->fresh());
+
+                // Distribute commissions
+                $commissionService->distribute($order);
+            } else {
+                $order->update(['status' => $status]);
+            }
         }
     }
 }

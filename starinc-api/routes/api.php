@@ -80,6 +80,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/orders', [OrderController::class, 'adminIndex']);
         Route::put('/orders/{id}/status', [OrderController::class, 'updateStatus']);
         Route::put('/orders/{id}/payment', [OrderController::class, 'reviewPayment']);
+        Route::put('/orders/{id}/tracking', [OrderController::class, 'updateTracking']);
 
         // Serve private payment proof file (hanya admin)
         Route::get('/payment-proofs/{proofId}/file', [OrderController::class, 'servePaymentProof']);

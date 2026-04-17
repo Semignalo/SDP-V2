@@ -31,7 +31,7 @@ class AdminController extends Controller
         $monthlyStats = Order::where('status', 'completed')
             ->where('created_at', '>=', Carbon::now()->subMonths(11)->startOfMonth())
             ->select(
-                DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
+                DB::raw("strftime('%Y-%m', created_at) as month"),
                 DB::raw('SUM(total) as revenue'),
                 DB::raw('COUNT(id) as orders')
             )
@@ -199,13 +199,26 @@ class AdminController extends Controller
     }
 
     /**
-     * Export Orders to CSV (Basic)
+     * Export Orders to CSV (with filters)
      */
     public function exportOrders(Request $request)
     {
-        $orders = Order::with(['user'])->orderBy('created_at', 'desc')->get();
-        // Since this is an API, we can just return a clean JSON array mapping, 
-        // and let frontend convert it to CSV / Excel directly.
+        $query = Order::with(['user'])->orderBy('created_at', 'desc');
+
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->has('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->has('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $orders = $query->get();
+
         $mapped = $orders->map(function ($o) {
             return [
                 'Order ID' => $o->order_number,

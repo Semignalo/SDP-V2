@@ -38,8 +38,8 @@ export const adminApi = {
         return response.data;
     },
 
-    exportOrders: async () => {
-        const response = await apiClient.get('/admin/orders/export');
+    exportOrders: async (params = {}) => {
+        const response = await apiClient.get('/admin/orders/export', { params });
         return response.data;
     },
 
