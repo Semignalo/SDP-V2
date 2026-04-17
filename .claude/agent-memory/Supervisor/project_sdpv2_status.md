@@ -1,38 +1,59 @@
 ---
 name: SDP-V2 Project Status
-description: Status project SDP-V2 per 2026-04-16 — apa yang sudah selesai, pending, dan risiko utama lintas tim
+description: Status project SDP-V2 per 2026-04-17 — evaluasi lengkap semua phase, fitur implemented, dan gaps
 type: project
 ---
 
-Project SDP-V2 berada di antara Phase 1 selesai dan siap masuk Phase 2 (backend) / Phase 3 (frontend).
+Project SDP-V2 berada di tahap lanjut development — backend dan frontend core sudah solid, tapi testing dan production-readiness belum ada.
 
-**Phase yang sudah selesai:**
-- Backend Phase 0 (A1–A4): scheduler tier, rate limiting auth, pindah logic ke Controller, validasi variant_id
-- Backend Phase 1 (B1–B6): MySQL migration, DB indexes, cache SystemSetting, stok validation + lockForUpdate, upload bukti bayar private, fix bug TierService
-- Backend Hotfix: endpoint POST /api/admin/upload untuk Appearance page
-- Frontend Phase 0 (A1–A4): migrasi Firebase ke Laravel API selesai, firebase.js dihapus, dependency dihapus
-- Frontend Phase 2 (D1, D2, E2, B2, B3, D5, D6, H1, H3): refactor komponen, skeleton, multi-tab cart, ESLint clean
-- UI/UX Phase 0 (A1, A2, B1, B2, D1, D2, D4, E1, E2): design token audit, stepper checkout, MOQ warning, dashboard, filter tabs, ConfirmModal, touch targets
+**Phase yang sudah COMPLETE:**
 
-**Masih pending (high priority):**
-- Frontend: D3 (React.lazy), D4 (ErrorBoundary), E1 (MOQ CartDrawer dari settings API), F1 (Vite chunks), G2 (validasi upload checkout), C1 (error handling client.js)
-- Backend Phase 2: C1 (N+1 CommissionService), C3 (rate limiting global)
-- Testing: hampir 0% coverage — belum ada test suite
-- DevOps: CI/CD belum ada, MySQL prod server belum diprovision
+Backend:
+- Auth (register, login, logout, Sanctum token, profile update/password)
+- Product CRUD + media upload + variant support + stock tracking + lockForUpdate
+- Order flow lengkap: checkout → payment proof upload → admin review → status update → commission distribute
+- Commission system: single-level (regular) + MLM 7-level (starcenter) + cancel on reversal
+- Tier system: auto-upgrade on order complete + scheduled downgrade via artisan command
+- Admin dashboard: revenue stats, monthly chart, top products, commission stats, recent orders
+- Admin endpoints: users CRUD + role update, commissions bulk pay + export, orders export
+- Settings: appearance (hero, branding) + payment info + system settings (MLM rates, MOQ, shipping)
+- Performance indexes (migration 2026-04-16), private storage untuk payment proof
+- Tracking number endpoint (migration 2026-04-17)
 
-**Risiko teratas:**
-1. Test coverage 0% — bug commission bisa lolos ke production
-2. N+1 query di CommissionService saat MLM chain panjang
-3. Firebase API key mungkin masih di git history (perlu rotate key)
-4. Tidak ada CI/CD — deploy manual, rawan human error
+Frontend:
+- Auth flow: login/register/logout + referral code support + password strength indicator
+- Catalog + filter + search + ProductCard + ProductDetail + variant selector
+- Cart (CartDrawer + CartContext, persisted localStorage)
+- Checkout 3-step: Shipping → Review → Payment (upload bukti bayar)
+- Invoice page
+- Profile (multi-tab: orders history, commissions, network tree, edit profile)
+- TrackOrders page
+- Admin panel: Dashboard (recharts), Products CRUD, Orders management, Users, Commissions, Tiers, Appearance settings, Payment settings
+- Lazy loading semua pages + ErrorBoundary + Skeleton + PageLoader + ConfirmModal
+- AppearanceContext (branding dari API)
 
-**Why:** Proyek e-commerce + MLM yang sedang dibangun dari tahap awal menuju production. Commission system menyangkut finansial — area paling berisiko.
+**Masih PENDING / INCOMPLETE:**
+- Testing: coverage 0% — hanya ExampleTest.php placeholder, tidak ada test untuk commission, order, tier logic
+- CI/CD: tidak ada pipeline GitHub Actions atau deployment automation
+- Frontend: MOQ warning di CartDrawer belum dari settings API (masih hardcoded?)
+- Backend: N+1 query di CommissionService (setiap level MLM query DB tersendiri)
+- Backend: Rate limiting global (hanya auth throttle 5/menit yang ada)
+- Wallet/withdraw system: belum ada (commission masih manual "paid" oleh admin)
+- Email notification: tidak ada (tidak ada Laravel Mail/notification setup)
+- About page: placeholder "Coming Soon"
+- Password reset / forgot password: tidak ada endpoint
 
-**How to apply:** Setiap rekomendasi harus memprioritaskan keamanan financial (commission, stok, checkout) di atas fitur baru. Jangan approve Phase 3 (Wallet) sebelum test suite commission ada.
+**Bug kritis yang sudah diperbaiki:**
+- Login.jsx baris 33 (useMemo sebelum useState) — sudah FIXED, urutan hooks sekarang benar
+- TierService B6 (reset last_transaction_at setelah downgrade) — sudah FIXED
 
----
+**Risiko teratas per 2026-04-17:**
+1. Test coverage 0% — commission logic (finansial) belum ada automated test sama sekali
+2. N+1 query CommissionService — perlu eager loading atau single query untuk MLM chain
+3. Tidak ada CI/CD — deploy manual
+4. Email notification tidak ada — buyer tidak tahu status order mereka berubah
+5. Forgot password tidak ada — user yang lupa password tidak bisa recover akun
 
-**Bug kritis ditemukan 2026-04-16 (investigasi blank white page):**
-1. `src/pages/Login.jsx` baris 33 — `useMemo` menggunakan `isLogin` SEBELUM state `isLogin` dideklarasikan di baris 45. Ini melanggar Rules of Hooks dan menyebabkan ReferenceError saat runtime. Halaman Login crash, dan karena banyak halaman lain redirect ke /login saat user belum login, mereka pun blank.
-2. Kemungkinan penyebab kedua: AuthContext `{!loading && children}` — jika backend tidak bisa dijangkau, token ada di localStorage tapi API call `/user/profile` gagal (network error, bukan 401), maka `loading` tetap false setelah catch, tapi `currentUser` null. Ini bisa menyebabkan halaman yang butuh `currentUser` render prematurely atau redirect.
-3. `src/lib/tierUtils.js` masih ada code `.toDate()` (Firestore-specific) tapi tidak dipanggil saat render — bukan crash cause.
+**Why:** E-commerce + MLM platform mendekati production. Commission dan stok adalah area finansial paling berisiko.
+
+**How to apply:** Prioritas ke testing commission/order sebelum push ke production. Jangan tambah fitur baru (wallet, notifikasi) sebelum test suite minimal untuk core flow ada.
