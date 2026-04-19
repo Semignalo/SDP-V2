@@ -17,6 +17,7 @@ class Order extends Model
         'order_number', 'user_id', 'customer_info',
         'subtotal', 'discount_percent', 'discount_amount',
         'shipping_cost', 'total', 'status',
+        'tracking_number', 'shipping_provider',
     ];
 
     protected $casts = [
