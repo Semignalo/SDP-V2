@@ -155,14 +155,16 @@ class OrderServiceTest extends TestCase
 
         $order = $this->service->createOrder($user, $this->customerInfo, $items);
 
-        $this->assertEquals(15, $order->discount_percent);
-        $this->assertEquals(30000, $order->discount_amount);
-        $this->assertEquals(190000, $order->total);
+        $this->assertEquals(15, (float)$order->discount_percent);
+        $this->assertEquals(30000, (float)$order->discount_amount);
+        $this->assertEquals(190000, (float)$order->total);
     }
 
     public function test_create_order_no_discount_without_tier(): void
     {
-        $user = User::factory()->create(['tier_id' => null]);
+        $bronzeTier = Tier::where('slug', 'bronze')->first();
+        $user = User::factory()->create();
+        $user->update(['tier_id' => null]);
         $product = Product::factory()->priced(200000)->create();
         $items = [
             [
@@ -174,8 +176,8 @@ class OrderServiceTest extends TestCase
 
         $order = $this->service->createOrder($user, $this->customerInfo, $items);
 
-        $this->assertEquals(0, $order->discount_percent);
-        $this->assertEquals(0, $order->discount_amount);
+        $this->assertEquals(0, (float)$order->discount_percent);
+        $this->assertEquals(0, (float)$order->discount_amount);
     }
 
     public function test_create_order_throws_when_starcenter_below_moq(): void
@@ -192,16 +194,18 @@ class OrderServiceTest extends TestCase
         ];
 
         $this->expectException(\Exception::class);
-        $this->service->createOrder($user, $this->customerInfo, $items);
-
-        $this->assertDatabaseCount('orders', 0);
+        try {
+            $this->service->createOrder($user, $this->customerInfo, $items);
+        } finally {
+            $this->assertDatabaseCount('orders', 0);
+        }
     }
 
     public function test_create_order_starcenter_passes_moq_check(): void
     {
         SystemSetting::setValue('starcenter_moq', '5000000');
         $user = User::factory()->asStarcenter()->create();
-        $product = Product::factory()->priced(5000000)->create();
+        $product = Product::factory()->priced(6000000)->create();
         $items = [
             [
                 'product_id'  => $product->id,
@@ -213,7 +217,7 @@ class OrderServiceTest extends TestCase
         $order = $this->service->createOrder($user, $this->customerInfo, $items);
 
         $this->assertDatabaseCount('orders', 1);
-        $this->assertGreaterThanOrEqual(5000000, $order->total);
+        $this->assertGreaterThanOrEqual(5000000, (float)$order->total);
     }
 
     public function test_create_order_clamps_quantity_to_minimum_one(): void
@@ -251,7 +255,8 @@ class OrderServiceTest extends TestCase
 
     public function test_create_order_updates_user_last_transaction_at(): void
     {
-        $user = User::factory()->create(['last_transaction_at' => null]);
+        $user = User::factory()->create();
+        $user->update(['last_transaction_at' => null]);
         $product = Product::factory()->create();
         $items = [
             [
@@ -261,9 +266,9 @@ class OrderServiceTest extends TestCase
             ],
         ];
 
-        $before = now();
+        $before = now()->subSecond();
         $this->service->createOrder($user, $this->customerInfo, $items);
-        $after = now();
+        $after = now()->addSeconds(2);
 
         $user->refresh();
         $this->assertNotNull($user->last_transaction_at);

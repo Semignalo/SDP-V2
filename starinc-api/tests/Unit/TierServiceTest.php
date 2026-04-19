@@ -69,11 +69,11 @@ class TierServiceTest extends TestCase
 
     public function test_evaluate_upgrade_skips_starcenter_role(): void
     {
-        $originalTierId = User::factory()->asStarcenter()->first()->tier_id;
         $user = User::factory()
             ->asStarcenter()
             ->withSpending(50000000)
             ->create();
+        $originalTierId = $user->tier_id;
 
         $this->service->evaluateUpgrade($user);
 
@@ -83,11 +83,11 @@ class TierServiceTest extends TestCase
 
     public function test_evaluate_upgrade_skips_admin_role(): void
     {
-        $originalTierId = User::factory()->asAdmin()->first()->tier_id;
         $user = User::factory()
             ->asAdmin()
             ->withSpending(50000000)
             ->create();
+        $originalTierId = $user->tier_id;
 
         $this->service->evaluateUpgrade($user);
 
@@ -107,7 +107,8 @@ class TierServiceTest extends TestCase
 
     public function test_check_downgrades_ignores_users_without_last_transaction(): void
     {
-        User::factory()->withLastTransaction(null)->create();
+        $user = User::factory()->create();
+        $user->update(['last_transaction_at' => null]);
         SystemSetting::setValue('tier_downgrade_days', '30');
 
         $result = $this->service->checkDowngrades();
@@ -204,7 +205,7 @@ class TierServiceTest extends TestCase
     public function test_check_downgrades_does_not_reset_last_transaction_at(): void
     {
         $silverTier = $this->getTier('silver');
-        $originalDate = now()->subDays(45);
+        $originalDate = now()->subDays(45)->startOfSecond();
 
         $user = User::factory()
             ->atTier($silverTier)
@@ -216,7 +217,7 @@ class TierServiceTest extends TestCase
         $this->service->checkDowngrades();
 
         $user->refresh();
-        $this->assertTrue($user->last_transaction_at->eq($originalDate));
+        $this->assertEquals(0, $user->last_transaction_at->diffInSeconds($originalDate));
     }
 
     public function test_check_downgrades_returns_correct_count(): void

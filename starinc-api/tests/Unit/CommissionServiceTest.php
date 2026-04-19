@@ -232,8 +232,8 @@ class CommissionServiceTest extends TestCase
         $this->service->cancelForOrder($order);
 
         $this->assertDatabaseCount('commissions', 3);
-        $this->assertDatabaseCount('commissions', 2, ['status' => 'cancelled']);
-        $this->assertDatabaseCount('commissions', 1, ['status' => 'paid']);
+        $this->assertEquals(2, Commission::where('status', 'cancelled')->count());
+        $this->assertEquals(1, Commission::where('status', 'paid')->count());
     }
 
     public function test_cancel_for_order_does_not_touch_other_orders(): void

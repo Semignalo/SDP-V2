@@ -1,10 +1,10 @@
 ---
 name: SDP-V2 Project Status
-description: Status project SDP-V2 per 2026-04-17 — evaluasi lengkap semua phase, fitur implemented, dan gaps
+description: Status project SDP-V2 per 2026-04-19 — Phase 2 testing dimulai, 34/42 tests passing, 8 failing
 type: project
 ---
 
-Project SDP-V2 berada di tahap lanjut development — backend dan frontend core sudah solid, tapi testing dan production-readiness belum ada.
+Project SDP-V2 berada di tahap lanjut development — backend dan frontend core sudah solid. Phase 2 testing telah dimulai (2026-04-19).
 
 **Phase yang sudah COMPLETE:**
 
@@ -32,30 +32,35 @@ Frontend:
 - Lazy loading semua pages + ErrorBoundary + Skeleton + PageLoader + ConfirmModal
 - AppearanceContext (branding dari API)
 
+**Phase 2 Testing (dimulai 2026-04-19):**
+- TestCase.php: RefreshDatabase + TierSeeder + SystemSetting::flushCache()
+- 6 factory: TierFactory, ProductFactory, ProductVariantFactory, OrderFactory, OrderItemFactory, CommissionFactory
+- 3 test files: CommissionServiceTest (10 tests), OrderServiceTest (17 tests), TierServiceTest (15 tests)
+- Status: 34/42 passing, 8 failing — analisis sedang berlangsung
+
+**Known Issues di 8 failing tests (analisis 2026-04-19):**
+1. TierServiceTest: `test_evaluate_upgrade_skips_starcenter_role` dan `test_evaluate_upgrade_skips_admin_role` — pakai `User::factory()->asStarcenter()->first()` (anti-pattern: factory->first() bukan untuk ambil existing user; akan null karena DB fresh)
+2. TierServiceTest: `test_check_downgrades_does_not_reset_last_transaction_at` — `withLastTransaction(Carbon $at)` type hint Carbon tapi test kirim `now()->subDays(45)` — perlu konfirmasi apakah Carbon atau CarbonImmutable
+3. OrderServiceTest: `test_create_order_applies_tier_discount` — Silver tier discount 15%, total harusnya 200000 - 30000 + 20000 = 190000, bukan 190000 (OK sebenarnya). Perlu verifikasi assertion `total` vs actual OrderService behavior
+4. CommissionServiceTest: `assertDatabaseCount` dengan 3 argumen — method ini hanya terima 2 argumen di Laravel; argumen ke-3 `['status' => 'cancelled']` tidak valid
+5. UserFactory: `withLastTransaction` type hint `Carbon` tapi `now()->subDays()` returns `Carbon\Carbon` yang OK — kemungkinan fine
+
 **Masih PENDING / INCOMPLETE:**
-- Testing: coverage 0% — hanya ExampleTest.php placeholder, tidak ada test untuk commission, order, tier logic
-- CI/CD: tidak ada pipeline GitHub Actions atau deployment automation
-- Frontend: MOQ warning di CartDrawer belum dari settings API (masih hardcoded?)
-- Backend: N+1 query di CommissionService (setiap level MLM query DB tersendiri)
-- Backend: Rate limiting global (hanya auth throttle 5/menit yang ada)
-- Wallet/withdraw system: belum ada (commission masih manual "paid" oleh admin)
-- Email notification: tidak ada (tidak ada Laravel Mail/notification setup)
+- Testing: 8 tests failing, CI/CD belum ada
+- Frontend: MOQ warning di CartDrawer masih hardcoded?
+- Backend: N+1 query di CommissionService (sudah ada single query, tapi perlu benchmark)
+- Rate limiting global belum ada
+- Wallet/withdraw system: belum ada
+- Email notification: tidak ada
 - About page: placeholder "Coming Soon"
 - Password reset / forgot password: tidak ada endpoint
 
 **Bug kritis yang sudah diperbaiki:**
-- Login.jsx baris 33 (useMemo sebelum useState) — sudah FIXED, urutan hooks sekarang benar
+- Login.jsx baris 33 (useMemo sebelum useState) — sudah FIXED
 - TierService B6 (reset last_transaction_at setelah downgrade) — sudah FIXED
 
-**Evaluasi terakhir:** 2026-04-19 (supervisor review — status tidak berubah dari 2026-04-17, tidak ada commit baru sejak da52c25)
-
-**Risiko teratas per 2026-04-17:**
-1. Test coverage 0% — commission logic (finansial) belum ada automated test sama sekali
-2. N+1 query CommissionService — perlu eager loading atau single query untuk MLM chain
-3. Tidak ada CI/CD — deploy manual
-4. Email notification tidak ada — buyer tidak tahu status order mereka berubah
-5. Forgot password tidak ada — user yang lupa password tidak bisa recover akun
+**Evaluasi terakhir:** 2026-04-19 (supervisor review — Phase 2 testing dimulai)
 
 **Why:** E-commerce + MLM platform mendekati production. Commission dan stok adalah area finansial paling berisiko.
 
-**How to apply:** Prioritas ke testing commission/order sebelum push ke production. Jangan tambah fitur baru (wallet, notifikasi) sebelum test suite minimal untuk core flow ada.
+**How to apply:** Prioritas ke fixing 8 failing tests sebelum push ke CI/CD. Setelah tests hijau, barulah setup GitHub Actions pipeline.

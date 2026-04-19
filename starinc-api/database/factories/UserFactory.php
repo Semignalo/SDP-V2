@@ -75,7 +75,7 @@ class UserFactory extends Factory
         ]);
     }
 
-    public function withLastTransaction(Carbon $at): static
+    public function withLastTransaction(?Carbon $at): static
     {
         return $this->state(fn() => [
             'last_transaction_at' => $at,
