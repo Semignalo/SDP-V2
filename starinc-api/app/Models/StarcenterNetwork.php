@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StarcenterNetwork extends Model
 {
+    use HasFactory;
+
     protected $table = 'starcenter_network';
 
     protected $fillable = ['upline_id', 'downline_id', 'depth'];

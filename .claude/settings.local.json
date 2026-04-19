@@ -26,7 +26,9 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(sqlite3 database/database.sqlite)",
-      "Bash(php -r ' *)"
+      "Bash(php -r ' *)",
+      "Bash(dir C:\\\\laragon\\\\www\\\\SDP-V2\\\\app\\\\Services *)",
+      "Bash(dir app\\\\Services)"
     ]
   }
 }

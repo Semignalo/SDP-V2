@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
 class Product extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'title', 'price', 'original_price', 'discount_label',
         'category', 'description', 'main_image', 'is_promo', 'sort_order', 'stock',
