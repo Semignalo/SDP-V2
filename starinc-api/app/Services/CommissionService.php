@@ -46,24 +46,22 @@ class CommissionService
     private function distributeMLM(User $starcenter, Order $order, User $buyer, float $orderAmount): void
     {
         $maxLevel = (int) SystemSetting::getValue('starcenter_max_level', 7);
-        $level = 1;
-        $current = $starcenter;
 
-        while ($current && $level <= $maxLevel) {
+        // Fetch entire upline chain in single query (closure table)
+        $ancestors = StarcenterNetwork::where('downline_id', $buyer->id)
+            ->where('depth', '<=', $maxLevel)
+            ->orderBy('depth', 'asc')
+            ->with('upline')
+            ->get();
+
+        foreach ($ancestors as $ancestor) {
+            $level = $ancestor->depth;
             $rateKey = "starcenter_level_{$level}_rate";
             $rate = (float) SystemSetting::getValue($rateKey, 0);
 
             if ($rate > 0) {
-                $this->createCommission($current, $order, $buyer, $orderAmount, $rate, $level);
+                $this->createCommission($ancestor->upline, $order, $buyer, $orderAmount, $rate, $level);
             }
-
-            // Find upline in starcenter network
-            $network = StarcenterNetwork::where('downline_id', $current->id)
-                ->where('depth', 1)
-                ->first();
-
-            $current = $network ? User::find($network->upline_id) : null;
-            $level++;
         }
     }
 

@@ -47,6 +47,8 @@ Frontend:
 - Login.jsx baris 33 (useMemo sebelum useState) — sudah FIXED, urutan hooks sekarang benar
 - TierService B6 (reset last_transaction_at setelah downgrade) — sudah FIXED
 
+**Evaluasi terakhir:** 2026-04-19 (supervisor review — status tidak berubah dari 2026-04-17, tidak ada commit baru sejak da52c25)
+
 **Risiko teratas per 2026-04-17:**
 1. Test coverage 0% — commission logic (finansial) belum ada automated test sama sekali
 2. N+1 query CommissionService — perlu eager loading atau single query untuk MLM chain

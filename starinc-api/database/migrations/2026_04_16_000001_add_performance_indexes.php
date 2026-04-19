@@ -30,8 +30,11 @@ return new class extends Migration
             $table->index(['user_id', 'status'], 'idx_commissions_user_status');
         });
 
-        // starcenter_network: composite (upline_id, depth) untuk traversal chain MLM
+        // starcenter_network:
+        // (downline_id, depth) untuk fetch entire upline chain dalam 1 query (optimized commission distribution)
+        // (upline_id, depth) untuk reverse traversal jika diperlukan
         Schema::table('starcenter_network', function (Blueprint $table) {
+            $table->index(['downline_id', 'depth'], 'idx_network_downline_depth');
             $table->index(['upline_id', 'depth'], 'idx_network_upline_depth');
         });
     }
@@ -53,6 +56,7 @@ return new class extends Migration
         });
 
         Schema::table('starcenter_network', function (Blueprint $table) {
+            $table->dropIndex('idx_network_downline_depth');
             $table->dropIndex('idx_network_upline_depth');
         });
     }
