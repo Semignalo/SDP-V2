@@ -76,35 +76,51 @@ php artisan test
 **Dependencies:** ✅ Phase 2.1 complete
 
 **Tasks:**
-- [ ] Create `tests/Feature/AuthControllerTest.php`
-  - [ ] test_register_sukses
-  - [ ] test_register_validasi_email
-  - [ ] test_login_sukses
-  - [ ] test_login_invalid
-  - [ ] test_logout
-  - [ ] test_profile_update
-  - [ ] test_password_change
+- [x] Create `tests/Feature/AuthControllerTest.php`
+  - [x] test_register_sukses
+  - [x] test_register_validasi_email
+  - [x] test_register_dengan_referral_code
+  - [x] test_login_sukses
+  - [x] test_login_invalid
+  - [x] test_logout
+  - [x] test_profile_update
+  - [x] test_password_change
+  - [x] test_password_change_invalid_current
 
-- [ ] Create `tests/Feature/OrderControllerTest.php`
-  - [ ] test_create_order_sukses
-  - [ ] test_create_order_insufficient_stock
-  - [ ] test_create_order_below_moq
-  - [ ] test_payment_proof_upload
-  - [ ] test_order_status_change
-  - [ ] test_tracking_number_input
-  - [ ] test_get_invoice
+- [x] Create `tests/Feature/OrderControllerTest.php`
+  - [x] test_create_order_sukses
+  - [x] test_create_order_insufficient_stock
+  - [x] test_create_order_below_moq
+  - [x] test_create_order_with_variant
+  - [x] test_payment_proof_upload
+  - [x] test_payment_proof_upload_wrong_status
+  - [x] test_get_invoice
+  - [x] test_my_orders
 
-- [ ] Create `tests/Feature/AdminControllerTest.php`
-  - [ ] test_dashboard_stats
-  - [ ] test_user_list
-  - [ ] test_user_detail
-  - [ ] test_user_role_update
-  - [ ] test_order_status_admin_change
-  - [ ] test_commission_bulk_pay
-  - [ ] test_export_orders
+- [x] Create `tests/Feature/AdminControllerTest.php`
+  - [x] test_dashboard_stats
+  - [x] test_user_list
+  - [x] test_user_detail
+  - [x] test_user_role_update
+  - [x] test_user_tier_update
+  - [x] test_user_password_update
+  - [x] test_order_list_admin
+  - [x] test_order_status_admin_change
+  - [x] test_order_payment_review_approve
+  - [x] test_order_tracking_update
+  - [x] test_commission_list
+  - [x] test_commission_pay
+  - [x] test_commission_bulk_pay
+  - [x] test_export_orders
+  - [x] test_export_commissions
+  - [x] test_unauthorized_access
+  - [x] test_user_commissions
 
-- [ ] Jalankan `php artisan test` verify semua feature tests passing
-- [ ] Git commit dengan message: `feat: add HTTP controller tests`
+- [x] Create `database/factories/PaymentProofFactory.php`
+- [x] Add Hash import to AdminController
+- [x] Add tracking_number & shipping_provider to Order model fillable
+- [x] Jalankan `php artisan test` verify semua feature tests passing (77 tests)
+- [x] Git commit dengan message: `feat: add HTTP controller tests`
 
 **Command ke Claude Code:**
 ```
@@ -114,11 +130,14 @@ Kerjakan Phase 2.2: Buat feature tests untuk Auth, Order, dan Admin HTTP endpoin
 **Success Criteria:**
 ```bash
 php artisan test --filter=Feature
-# Result: 19+ passed ✅
+# Result: 35 passed (146 assertions) ✅
+
+php artisan test
+# Result: 77 tests passed (210 assertions) ✅
 ```
 
 **Estimasi:** 1 hari  
-**Status:** ⏳ WAITING
+**Status:** ✅ COMPLETE
 
 ---
 
@@ -860,16 +879,17 @@ Status: 🚀 LIVE
 
 ## Current Status
 - **Phase 1:** ✅ 100% COMPLETE
-- **Phase 2:** 🟡 18% (Step 2.1 complete, 2.2-2.8 pending)
+- **Phase 2:** 🟡 28% (Steps 2.1-2.2 complete, 2.3-2.8 pending)
 - **Phase 3:** ⏳ 0% (Not started)
-- **Overall:** 68% Production-Ready
+- **Overall:** 72% Production-Ready
 
 ## Next Immediate Steps (DO THIS FIRST)
 1. ✅ Phase 2.1: Fix tests (COMPLETE)
-2. ⏳ Phase 2.2: Feature tests (NEXT)
-3. ⏳ Phase 2.3-2.4: Password recovery (WEEK 1)
-4. ⏳ Phase 2.5-2.6: Email notifications (WEEK 1)
-5. ⏳ Phase 2.7: CI/CD pipeline (WEEK 1)
+2. ✅ Phase 2.2: Feature tests (COMPLETE)
+3. ⏳ Phase 2.3-2.4: Password recovery (NEXT)
+4. ⏳ Phase 2.5-2.6: Email notifications (WEEK 2)
+5. ⏳ Phase 2.7: CI/CD pipeline (WEEK 2)
+6. ⏳ Phase 2.8: Database compatibility (WEEK 2)
 
 ## Timeline
 - **This Week:** Phase 2.1 - 2.2
@@ -904,6 +924,6 @@ Example:
 
 ---
 
-**Last Updated:** 2026-04-19 — Phase 2.1 ✅ COMPLETE  
-**Next Review:** Before Phase 2.2 starts
+**Last Updated:** 2026-04-19 — Phase 2.2 ✅ COMPLETE (77 tests, 210 assertions)  
+**Next Review:** Before Phase 2.3 starts
 
