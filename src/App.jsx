@@ -12,6 +12,8 @@ const Checkout = lazy(() => import('./pages/Checkout'));
 const Invoice = lazy(() => import('./pages/Invoice'));
 const TrackOrders = lazy(() => import('./pages/TrackOrders'));
 const Login = lazy(() => import('./pages/Login'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Profile = lazy(() => import('./pages/Profile'));
 const CenterShop = lazy(() => import('./pages/CenterShop'));
 const JoinStarcenter = lazy(() => import('./pages/JoinStarcenter'));
@@ -41,6 +43,8 @@ function App() {
           <Route path="/orders" element={<TrackOrders />} />
           <Route path="/about" element={<div className="p-20 text-center">About Page Coming Soon</div>} />
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/center" element={<CenterShop />} />
           <Route path="/join-starcenter" element={<JoinStarcenter />} />

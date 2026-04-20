@@ -225,6 +225,19 @@ export default function Login() {
                             {isLogin ? 'Daftar di sini' : 'Masuk di sini'}
                         </button>
                     </div>
+
+                    {/* Forgot Password Link */}
+                    {isLogin && (
+                        <div className="mt-3 text-center text-sm">
+                            <button
+                                type="button"
+                                onClick={() => navigate('/forgot-password')}
+                                className="text-primary hover:underline font-medium"
+                            >
+                                Lupa Password?
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
