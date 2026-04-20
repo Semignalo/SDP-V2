@@ -29,10 +29,18 @@ class AdminController extends Controller
             ->count();
 
         // 2. Charts: Revenue & Orders per Month (Last 12 months)
+        // Database-agnostic: works with SQLite (tests) and MySQL (production)
+        $driver = DB::getDriverName();
+        $dateFormat = match($driver) {
+            'mysql' => DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
+            'sqlite' => DB::raw("strftime('%Y-%m', created_at) as month"),
+            default => DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
+        };
+
         $monthlyStats = Order::where('status', 'completed')
             ->where('created_at', '>=', Carbon::now()->subMonths(11)->startOfMonth())
             ->select(
-                DB::raw("strftime('%Y-%m', created_at) as month"),
+                $dateFormat,
                 DB::raw('SUM(total) as revenue'),
                 DB::raw('COUNT(id) as orders')
             )
