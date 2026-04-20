@@ -5,6 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CheckoutRequest;
 use App\Http\Requests\UploadPaymentProofRequest;
+use App\Mail\OrderConfirmedMail;
+use App\Mail\PaymentApprovedMail;
+use App\Mail\PaymentRejectedMail;
+use App\Mail\OrderShippedMail;
 use App\Models\Order;
 use App\Models\PaymentProof;
 use App\Models\SystemSetting;
@@ -12,6 +16,7 @@ use App\Services\CommissionService;
 use App\Services\OrderService;
 use App\Services\TierService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 class OrderController extends Controller
@@ -30,6 +35,14 @@ class OrderController extends Controller
                 $validated['customer_info'],
                 $validated['items']
             );
+
+            // Send order confirmation email
+            try {
+                Mail::queue(new OrderConfirmedMail($order));
+            } catch (\Exception $mailError) {
+                // Log email error but don't fail the request
+                \Log::warning('Failed to queue order confirmation email', ['order_id' => $order->id]);
+            }
 
             return response()->json([
                 'data' => [
@@ -208,6 +221,17 @@ class OrderController extends Controller
             $orderService->restoreStock($order);
         }
 
+        // Send status change emails
+        try {
+            if ($newStatus === 'processing' && $oldStatus === 'pending_payment') {
+                Mail::queue(new PaymentApprovedMail($order));
+            } elseif ($newStatus === 'shipped') {
+                Mail::queue(new OrderShippedMail($order));
+            }
+        } catch (\Exception $mailError) {
+            \Log::warning('Failed to queue order status email', ['order_id' => $id, 'status' => $newStatus]);
+        }
+
         return response()->json([
             'message' => 'Status pesanan berhasil diperbarui menjadi '.$newStatus,
             'order' => $order->fresh()->load(['items', 'paymentProof']),
@@ -233,9 +257,20 @@ class OrderController extends Controller
             'reviewed_at' => now(),
         ]);
 
-        // If approved, auto-change order status to processing
-        if ($validated['status'] === 'approved' && $order->status === 'pending_payment') {
-            $order->update(['status' => 'processing']);
+        // Send payment review email
+        try {
+            if ($validated['status'] === 'approved') {
+                // If approved, auto-change order status to processing
+                if ($order->status === 'pending_payment') {
+                    $order->update(['status' => 'processing']);
+                }
+                Mail::queue(new PaymentApprovedMail($order));
+            } else {
+                // Payment rejected
+                Mail::queue(new PaymentRejectedMail($order, $validated['notes'] ?? null));
+            }
+        } catch (\Exception $mailError) {
+            \Log::warning('Failed to queue payment review email', ['order_id' => $orderId, 'status' => $validated['status']]);
         }
 
         return response()->json([
@@ -260,6 +295,13 @@ class OrderController extends Controller
             'tracking_number' => $validated['tracking_number'],
             'shipping_provider' => $validated['shipping_provider'] ?? null,
         ]);
+
+        // Send tracking notification email
+        try {
+            Mail::queue(new OrderShippedMail($order->fresh()));
+        } catch (\Exception $mailError) {
+            \Log::warning('Failed to queue shipping notification email', ['order_id' => $id]);
+        }
 
         return response()->json([
             'message' => 'Nomor resi berhasil diperbarui.',

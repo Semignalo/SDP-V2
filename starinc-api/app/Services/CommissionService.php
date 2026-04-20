@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
+use App\Mail\CommissionDistributedMail;
 use App\Models\Commission;
 use App\Models\Order;
 use App\Models\StarcenterNetwork;
 use App\Models\SystemSetting;
 use App\Models\User;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class CommissionService
 {
@@ -80,7 +83,7 @@ class CommissionService
             return;
         }
 
-        Commission::create([
+        $commission = Commission::create([
             'user_id'           => $earner->id,
             'order_id'          => $order->id,
             'source_user_id'    => $buyer->id,
@@ -90,6 +93,13 @@ class CommissionService
             'level'             => $level,
             'status'            => 'pending',
         ]);
+
+        // Send commission notification email
+        try {
+            Mail::queue(new CommissionDistributedMail($commission));
+        } catch (\Exception $mailError) {
+            Log::warning('Failed to queue commission email', ['commission_id' => $commission->id]);
+        }
     }
 
     /**
