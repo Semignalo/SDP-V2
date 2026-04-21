@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { adminApi } from '../../api/adminApi';
+import apiClient from '../../api/client';
 import { ArrowLeft, Lock, Shield, Zap, Users, ShoppingCart, TrendingUp, Copy, Check, X, RefreshCw } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -43,9 +44,8 @@ export default function UserDetail() {
 
     const fetchTiers = async () => {
         try {
-            const response = await fetch('/api/tiers');
-            const data = await response.json();
-            setTiers(data);
+            const response = await apiClient.get('/tiers');
+            setTiers(response.data);
         } catch (error) {
             console.error("Error fetching tiers:", error);
         }

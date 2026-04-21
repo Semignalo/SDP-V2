@@ -140,6 +140,22 @@ export default function ProductFormModal({
                         </div>
                     </div>
 
+                    {/* Stock */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Stock <span className="text-gray-400 font-normal">(Kosongkan = unlimited)</span>
+                        </label>
+                        <input
+                            type="number"
+                            name="stock"
+                            value={formData.stock}
+                            onChange={onFormChange}
+                            min="0"
+                            className={inputClass}
+                            placeholder="e.g. 100"
+                        />
+                    </div>
+
                     {/* Description */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Description / Details</label>

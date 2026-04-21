@@ -966,6 +966,68 @@ Example:
 
 ---
 
-**Last Updated:** 2026-04-20 — Phase 3.1 ✅ COMPLETE (Infrastructure researched & planned)  
+**Last Updated:** 2026-04-20 — Phase 3.1 ✅ COMPLETE + Hotfix Session (Media & Video)  
 **Next Review:** Before Phase 3.2 (VPS Setup & Deployment) starts
+
+---
+
+# 🔧 HOTFIX SESSION — 2026-04-20 (Media, Video & Stock)
+
+**Type:** Bug Fix + Feature Addition (tidak termasuk dalam phase plan)  
+**Status:** ✅ ALL FIXES APPLIED
+
+## Bug Fixes
+
+### HF-1: Product image tidak tampil di admin & halaman produk
+- **Root Cause:** `ProductTable.jsx` dan `ProductDetail.jsx` menggunakan `product.main_image` (raw path) bukan `product.main_image_url` (full URL dari accessor)
+- **Files Changed:**
+  - `src/components/admin/ProductTable.jsx` — ganti `main_image` → `main_image_url`
+  - `src/pages/ProductDetail.jsx` — ganti `data.main_image` → `data.main_image_url`
+  - `src/pages/admin/Products.jsx` — `initialMedia` prioritaskan `m.url` dari API
+
+### HF-2: Media thumbnail di ProductDetail error (media items adalah objects, bukan strings)
+- **Root Cause:** API mengembalikan `product.media` sebagai array of objects `{id, url, type, file_path, ...}` tapi kode memperlakukan sebagai string URL (`item.includes()`, `src={item}`)
+- **Files Changed:**
+  - `src/pages/ProductDetail.jsx` — gunakan `item.url`, `item.type === 'video'` untuk deteksi video
+
+### HF-3: Video appearance upload tersimpan di disk salah & URL relative
+- **Root Cause:** `SettingsController::upload()` memakai default disk `local` (root: `storage/app/private`) bukan `public`. URL dikembalikan tanpa host → frontend port 5173 resolve ke `localhost:5173/storage/...` bukan `localhost:8000/storage/...`
+- **Files Changed:**
+  - `starinc-api/app/Http/Controllers/Api/SettingsController.php` — ganti `store($storagePath)` ke `store($folder, 'public')` + `Storage::disk('public')->url($path)`
+
+### HF-4: Admin Appearance tidak load settings tersimpan
+- **Root Cause:** Response dari `/api/admin/appearance` adalah flat object `{heroVideoUrl: ...}`, tapi kode cek `data.settings` (selalu undefined)
+- **Files Changed:**
+  - `src/pages/admin/Appearance.jsx` — ganti `data.settings` → `data`
+
+### HF-5: Homepage tidak update setelah admin save appearance
+- **Root Cause:** `AppearanceContext` punya cache localStorage 5 menit, tidak di-invalidate setelah admin save
+- **Files Changed:**
+  - `src/pages/admin/Appearance.jsx` — tambah `localStorage.removeItem('appearance_settings_cache')` setelah save berhasil
+
+## Feature Addition
+
+### HF-6: Stock management di admin product form
+- **Deskripsi:** Kolom `stock` sudah ada di DB dan model, tapi tidak ada UI untuk mengisinya
+- **Files Changed:**
+  - `src/components/admin/ProductFormModal.jsx` — tambah input field Stock (kosong = unlimited)
+  - `src/pages/admin/Products.jsx` — tambah `stock` ke `EMPTY_FORM`, `handleEdit`, `handleSubmit`
+
+---
+
+## Impact Analysis terhadap Production Plan
+
+| Item | GUIDELINE.md | Impact |
+|------|-------------|--------|
+| P0.1 Appearance.jsx | Dicatat "masih Firebase" | **Sudah bersih** — file sudah pernah dimigrasi ke Laravel API sebelum sesi ini. Bug `data.settings` sekarang fixed ✅ |
+| P1.3 Stok Produk | "Validasi stok di OrderService" | Admin UI untuk set stock sudah ada ✅. **Masih perlu:** validasi & pengurangan stok di `OrderService::createOrder()` — belum dikerjakan |
+| Phase 3.7 Security | "File upload security check" | Upload video sekarang ke disk yang benar (`public`) ✅ |
+| Tests (86 tests) | Semua harus passing | Fix ini tidak mengubah backend logic yang ada test-nya. **Perlu verify:** `php artisan test` setelah deploy |
+
+## Yang Masih Perlu Dikerjakan dari P1.3
+```
+OrderService::createOrder() — belum ada:
+  [ ] Validasi stock sebelum order dibuat
+  [ ] Pengurangan stock setelah order confirmed
+```
 

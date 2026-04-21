@@ -28,7 +28,17 @@
       "Bash(sqlite3 database/database.sqlite)",
       "Bash(php -r ' *)",
       "Bash(dir C:\\\\laragon\\\\www\\\\SDP-V2\\\\app\\\\Services *)",
-      "Bash(dir app\\\\Services)"
+      "Bash(dir app\\\\Services)",
+      "Bash(xargs grep *)",
+      "Bash(curl -s \"http://localhost:8000/api/products/1\")",
+      "Bash(find C:\\\\\\\\laragon\\\\\\\\www\\\\\\\\SDP-V2\\\\\\\\starinc-api\\\\\\\\app\\\\\\\\Http\\\\\\\\Controllers -name \"*.php\" -type f)",
+      "Bash(claude plugin *)",
+      "Bash(mkdir -p ~/.ssh)",
+      "Bash(ssh-keyscan github.com)",
+      "Bash(git config *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(playwright-cli *)"
     ]
   }
 }

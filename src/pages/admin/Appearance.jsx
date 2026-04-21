@@ -111,8 +111,8 @@ export default function AdminAppearance() {
         const fetchAppearance = async () => {
             try {
                 const data = await adminSettingsApi.getAppearance();
-                if (data && data.settings) {
-                    setConfig(prev => ({ ...prev, ...data.settings }));
+                if (data && typeof data === 'object') {
+                    setConfig(prev => ({ ...prev, ...data }));
                 }
             } catch (error) {
                 console.error('Error fetching appearance settings:', error);
@@ -140,6 +140,7 @@ export default function AdminAppearance() {
         setSaving(true);
         try {
             await adminSettingsApi.updateAppearance(config);
+            localStorage.removeItem('appearance_settings_cache');
             setLastSaved(new Date());
             Swal.fire({
                 title: 'Berhasil!',

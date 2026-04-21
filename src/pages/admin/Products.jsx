@@ -17,7 +17,8 @@ const EMPTY_FORM = {
     image: DEFAULT_IMAGE,
     media: [],
     variants: [],
-    isPromo: false
+    isPromo: false,
+    stock: ''
 };
 
 export default function Products() {
@@ -85,9 +86,9 @@ export default function Products() {
         setEditId(product.id);
 
         const initialMedia = product.media && product.media.length > 0
-            ? product.media.map(m => m.file_path ? `/storage/${m.file_path}` : m.url)
-            : (product.main_image || (product.image && product.image !== DEFAULT_IMAGE)
-                ? [product.main_image || product.image]
+            ? product.media.map(m => m.url || (m.file_path ? `/storage/${m.file_path}` : null)).filter(Boolean)
+            : (product.main_image_url || product.main_image || (product.image && product.image !== DEFAULT_IMAGE)
+                ? [product.main_image_url || product.main_image || product.image]
                 : []);
 
         setFormData({
@@ -99,12 +100,13 @@ export default function Products() {
             discount: product.discount_label || product.discount || '',
             category: product.category || 'The Act',
             description: product.description || '',
-            image: product.main_image || product.image || '',
+            image: product.main_image_url || product.main_image || product.image || '',
             media: initialMedia,
             variants: product.variants
                 ? product.variants.map(v => ({ name: v.name, price: v.price }))
                 : [],
-            isPromo: product.is_promo || product.isPromo || false
+            isPromo: product.is_promo || product.isPromo || false,
+            stock: product.stock !== null && product.stock !== undefined ? String(product.stock) : ''
         });
         setFilesToUpload([]);
         setIsModalOpen(true);
@@ -151,6 +153,7 @@ export default function Products() {
                 category: formData.category,
                 description: formData.description,
                 is_promo: formData.isPromo,
+                stock: formData.stock !== '' ? parseInt(formData.stock, 10) : null,
                 variants: formData.variants.map(v => ({
                     name: v.name,
                     price: parseFloat(String(v.price).replace(/,/g, ''))

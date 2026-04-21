@@ -27,8 +27,11 @@ export default function CenterShop() {
     const [commissions, setCommissions] = useState(null);
     const [loadingStats, setLoadingStats] = useState(true);
 
+    // Support both 'starcenter' and 'center' role names
+    const isCenter = userRole === 'starcenter' || userRole === 'center' || userRole === 'admin';
+
     useEffect(() => {
-        if (!currentUser) return;
+        if (!currentUser || !isCenter) return;
         const fetchStats = async () => {
             try {
                 const [netData, commData] = await Promise.all([
@@ -44,12 +47,10 @@ export default function CenterShop() {
             }
         };
         fetchStats();
-    }, [currentUser]);
+    }, [currentUser, isCenter]);
 
     if (!currentUser) return <Navigate to="/login" replace />;
 
-    // Support both 'starcenter' and 'center' role names
-    const isCenter = userRole === 'starcenter' || userRole === 'center' || userRole === 'admin';
     if (!isCenter) {
         return (
             <div className="min-h-screen pt-24 pb-12 px-4 flex flex-col items-center justify-center text-center">

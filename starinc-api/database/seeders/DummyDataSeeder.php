@@ -89,10 +89,9 @@ class DummyDataSeeder extends Seeder
     {
         $centers = [];
         $centerData = [
-            ['name' => 'PT Starinc Pusat', 'email' => 'center.pusat@starinc.com', 'phone' => '08111111111', 'code' => 'CENTER01'],
-            ['name' => 'Distributor Jakarta', 'email' => 'center.jakarta@starinc.com', 'phone' => '08112222222', 'code' => 'CENTER02'],
-            ['name' => 'Distributor Bandung', 'email' => 'center.bandung@starinc.com', 'phone' => '08113333333', 'code' => 'CENTER03'],
-            ['name' => 'Distributor Surabaya', 'email' => 'center.surabaya@starinc.com', 'phone' => '08114444444', 'code' => 'CENTER04'],
+            ['name' => 'SC Jawa Timur', 'email' => 'sc.jawatimur@starinc.com', 'phone' => '08112222222', 'code' => 'SCJT001'],
+            ['name' => 'SC Jawa Tengah', 'email' => 'sc.jawatengah@starinc.com', 'phone' => '08113333333', 'code' => 'SCJG001'],
+            ['name' => 'SC Jawa Barat', 'email' => 'sc.jawabarat@starinc.com', 'phone' => '08114444444', 'code' => 'SCJB001'],
         ];
 
         foreach ($centerData as $data) {
@@ -117,17 +116,17 @@ class DummyDataSeeder extends Seeder
         $allUsers = $centers;
 
         foreach ($centers as $center) {
-            // Each center has multiple downlines (level 1)
-            for ($i = 1; $i <= 8; $i++) {
+            // Each center has exactly 3 downlines (level 1)
+            for ($i = 1; $i <= 3; $i++) {
                 $downline1 = User::firstOrCreate(
-                    ['email' => "downline.l1.{$center->id}.{$i}@example.com"],
+                    ['email' => "downline.{$center->id}.{$i}@starinc.com"],
                     [
-                        'name' => $center->name . " - Downline L1 #{$i}",
+                        'name' => $center->name . " - Downline #{$i}",
                         'password' => Hash::make('password123'),
-                        'phone' => '08120000000' . str_pad($i, 3, '0', STR_PAD_LEFT),
+                        'phone' => '0812' . str_pad($center->id, 4, '0', STR_PAD_LEFT) . str_pad($i, 3, '0', STR_PAD_LEFT),
                         'role' => 'regular',
                         'referrer_id' => $center->id,
-                        'tier_id' => $tiers['silver']->id,
+                        'tier_id' => $tiers['bronze']->id,
                     ]
                 );
                 StarcenterNetwork::firstOrCreate([
@@ -136,31 +135,6 @@ class DummyDataSeeder extends Seeder
                     'depth' => 1
                 ]);
                 $allUsers[] = $downline1;
-
-                // Each level 1 has 2-3 level 2 downlines
-                for ($j = 1; $j <= rand(2, 3); $j++) {
-                    $downline2 = User::firstOrCreate(
-                        ['email' => "downline.l2.{$downline1->id}.{$j}@example.com"],
-                        [
-                            'name' => $downline1->name . " - L2 #{$j}",
-                            'password' => Hash::make('password123'),
-                            'phone' => '08130000000' . str_pad($j, 3, '0', STR_PAD_LEFT),
-                            'role' => 'regular',
-                            'referrer_id' => $downline1->id,
-                        ]
-                    );
-                    StarcenterNetwork::firstOrCreate([
-                        'upline_id' => $downline1->id,
-                        'downline_id' => $downline2->id,
-                        'depth' => 2
-                    ]);
-                    StarcenterNetwork::firstOrCreate([
-                        'upline_id' => $center->id,
-                        'downline_id' => $downline2->id,
-                        'depth' => 2
-                    ]);
-                    $allUsers[] = $downline2;
-                }
             }
         }
         return $allUsers;

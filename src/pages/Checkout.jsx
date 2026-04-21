@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { orderApi } from '../api/orderApi';
@@ -57,6 +57,9 @@ export default function Checkout() {
     const { cart, getCartTotal, clearCart } = useCart();
     const { userData } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    if (!userData) return <Navigate to="/login" state={{ from: location }} replace />;
 
     const [loading, setLoading] = useState(false);
     const [moqThreshold, setMoqThreshold] = useState(5000000); // Default fallback

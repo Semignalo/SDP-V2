@@ -21,7 +21,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name'     => 'required|string|max:255',
             'email'    => 'required|string|email|unique:users',
-            'password' => 'required|string|min:6|confirmed',
+            'password' => 'required|string|min:8|confirmed',
             'phone'    => 'nullable|string|max:20',
             'referral_code' => 'nullable|string|exists:users,referral_code',
         ]);
@@ -149,7 +149,7 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'current_password' => 'required|string',
-            'password'         => 'required|string|min:6|confirmed',
+            'password'         => 'required|string|min:8|confirmed',
         ]);
 
         $user = $request->user();

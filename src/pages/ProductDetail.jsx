@@ -19,7 +19,7 @@ export default function ProductDetail() {
                 
                 const data = await productApi.getProduct(id);
                 setProduct(data);
-                setMainImage(data.main_image); // Use main_image from DB
+                setMainImage(data.main_image_url || data.main_image);
                 if (data.variants && data.variants.length > 0) {
                     setSelectedVariant(data.variants[0]);
                 }
@@ -83,27 +83,30 @@ export default function ProductDetail() {
                     {/* Thumbnails */}
                     {product.media && product.media.length > 1 && (
                         <div className="grid grid-cols-4 gap-2">
-                            {product.media.map((item, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => setMainImage(item)}
-                                    className={`relative aspect-[3/4] bg-gray-50 overflow-hidden border transition-all ${mainImage === item ? 'border-black' : 'border-transparent hover:border-gray-300'}`}
-                                >
-                                    {item.includes('.mp4') || item.includes('video') ? (
-                                        <video src={item} className="w-full h-full object-cover pointer-events-none" muted />
-                                    ) : (
-                                        <img src={item} alt={`View ${idx}`} className="w-full h-full object-cover" />
-                                    )}
-                                    {/* Video Indicator */}
-                                    {(item.includes('.mp4') || item.includes('video')) && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                                            <div className="w-6 h-6 bg-white/80 rounded-full flex items-center justify-center p-1">
-                                                <div className="w-0 h-0 border-t-[4px] border-t-transparent border-l-[6px] border-l-black border-b-[4px] border-b-transparent ml-0.5"></div>
+                            {product.media.map((item, idx) => {
+                                const itemUrl = item.url || item;
+                                const isVideo = item.type === 'video' || itemUrl?.includes('.mp4') || itemUrl?.includes('.webm');
+                                return (
+                                    <button
+                                        key={idx}
+                                        onClick={() => setMainImage(itemUrl)}
+                                        className={`relative aspect-[3/4] bg-gray-50 overflow-hidden border transition-all ${mainImage === itemUrl ? 'border-black' : 'border-transparent hover:border-gray-300'}`}
+                                    >
+                                        {isVideo ? (
+                                            <video src={itemUrl} className="w-full h-full object-cover pointer-events-none" muted />
+                                        ) : (
+                                            <img src={itemUrl} alt={`View ${idx}`} className="w-full h-full object-cover" />
+                                        )}
+                                        {isVideo && (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                                <div className="w-6 h-6 bg-white/80 rounded-full flex items-center justify-center p-1">
+                                                    <div className="w-0 h-0 border-t-[4px] border-t-transparent border-l-[6px] border-l-black border-b-[4px] border-b-transparent ml-0.5"></div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
-                                </button>
-                            ))}
+                                        )}
+                                    </button>
+                                );
+                            })}
                         </div>
                     )}
                 </div>

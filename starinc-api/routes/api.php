@@ -35,8 +35,8 @@ Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::get('/appearance', [SettingsController::class, 'appearance']);
 Route::get('/settings/payment', [SettingsController::class, 'paymentInfo']);
 
-// Invoice (public by order number)
-Route::get('/orders/{orderNumber}/invoice', [OrderController::class, 'invoice']);
+// Invoice (auth required — ownership checked in controller)
+// Moved out of public block: CRIT-1 fix — invoice exposed full PII without auth
 
 // Tiers list (public)
 Route::get('/tiers', function () {
@@ -60,6 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Checkout & Orders
     Route::post('/checkout', [OrderController::class, 'checkout']);
     Route::get('/user/orders', [OrderController::class, 'myOrders']);
+    Route::get('/orders/{orderNumber}/invoice', [OrderController::class, 'invoice']);
     Route::post('/orders/{id}/payment-proof', [OrderController::class, 'uploadPaymentProof']);
 
     // Commissions (my commissions)

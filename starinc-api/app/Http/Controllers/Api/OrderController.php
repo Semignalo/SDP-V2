@@ -71,23 +71,34 @@ class OrderController extends Controller
     }
 
     /**
-     * Get invoice for a specific order (public by order_number).
+     * Get invoice for a specific order.
+     * Requires auth — user can only view their own orders; admin can view any.
      */
-    public function invoice(string $orderNumber)
+    public function invoice(Request $request, string $orderNumber)
     {
-        $order = Order::where('order_number', $orderNumber)
-            ->with(['items', 'paymentProof'])
-            ->firstOrFail();
+        $user = $request->user();
 
-        // Get payment config
+        $query = Order::where('order_number', $orderNumber)
+            ->with(['items', 'paymentProof']);
+
+        if ($user->role !== 'admin') {
+            $query->where('user_id', $user->id);
+        }
+
+        $order = $query->firstOrFail();
+
         $paymentConfig = [
             'bank_name' => SystemSetting::getValue('payment_bank_name', 'BCA'),
             'account_number' => SystemSetting::getValue('payment_account_number', '888888888'),
             'account_name' => SystemSetting::getValue('payment_account_name', 'PT BBK'),
         ];
 
+        // Strip internal PK from response to prevent IDOR facilitation
+        $orderData = $order->toArray();
+        unset($orderData['id'], $orderData['user_id']);
+
         return response()->json([
-            'order' => $order,
+            'order' => $orderData,
             'payment_config' => $paymentConfig,
         ]);
     }

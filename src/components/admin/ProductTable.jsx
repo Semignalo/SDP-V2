@@ -31,7 +31,7 @@ export default function ProductTable({ products, isGridView, onEdit, onDelete, l
         return (
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {products.map((product) => {
-                    const productImage = product.main_image || product.image || '/logo.png';
+                    const productImage = product.main_image_url || product.main_image || product.image || '/logo.png';
                     const discountLabel = product.discount_label || product.discount;
                     const originalPrice = product.original_price || product.originalPrice;
 
@@ -121,7 +121,7 @@ export default function ProductTable({ products, isGridView, onEdit, onDelete, l
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                     {products.map((product) => {
-                        const productImage = product.main_image || product.image || '/logo.png';
+                        const productImage = product.main_image_url || product.main_image || product.image || '/logo.png';
                         const discountLabel = product.discount_label || product.discount;
                         const originalPrice = product.original_price || product.originalPrice;
                         const isOutOfStock = product.stock !== undefined && product.stock <= 0;

@@ -144,3 +144,14 @@ curl http://localhost:8000/api/tiers
 Default test credentials:
 - Admin: `admin@sdp.com` / `password123`
 - Starcenter: `center.pusat@starinc.com` / `password123`
+
+## Playwright Profiles
+Authenticated browser profiles are available at `.playwright/profiles/`.
+Available profiles:
+- admin: Admin dengan full access ke admin panel (admin@starinc.id / password)
+- starcenter: Starcenter user dengan MLM multi-level commission (sc.jawatimur@starinc.com / password123)
+- regular: Regular customer dengan single-level commission (downline.2.1@starinc.com / password123)
+
+Config: `.playwright/profiles.json`
+To load a profile, use `playwright-cli -s={session} state-load .playwright/profiles/<role>.json` to restore cookies and localStorage.
+Run `/setup-profiles` to create new profiles or refresh expired sessions.

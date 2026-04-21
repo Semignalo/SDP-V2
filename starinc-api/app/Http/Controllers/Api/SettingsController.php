@@ -119,14 +119,10 @@ class SettingsController extends Controller
         $folder = $request->input('folder', 'uploads');
         // Sanitise: strip leading/trailing slashes, collapse any double-slashes
         $folder = trim(preg_replace('#/+#', '/', $folder), '/');
-        $storagePath = 'public/'.$folder;
 
-        $path = $request->file('file')->store($storagePath);
+        $path = $request->file('file')->store($folder, 'public');
 
-        // Convert storage path to a publicly accessible URL
-        // storage_path stores as public/uploads/…, public URL is /storage/uploads/…
-        $relativePath = str_replace('public/', '', $path);
-        $url = Storage::url($relativePath);
+        $url = Storage::disk('public')->url($path);
 
         return response()->json(['url' => $url]);
     }
