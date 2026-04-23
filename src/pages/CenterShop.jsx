@@ -70,7 +70,7 @@ export default function CenterShop() {
     }
 
     // Compute commission stats
-    const commList = commissions?.data || [];
+    const commList = commissions?.data?.data || [];
     const totalPending = commList.filter(c => c.status === 'pending').reduce((s, c) => s + parseFloat(c.commission_amount || 0), 0);
     const totalPaid = commList.filter(c => c.status === 'paid').reduce((s, c) => s + parseFloat(c.commission_amount || 0), 0);
 

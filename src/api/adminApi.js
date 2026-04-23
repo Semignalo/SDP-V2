@@ -11,6 +11,11 @@ export const adminApi = {
         return response.data;
     },
 
+    getNetworkTree: async () => {
+        const response = await apiClient.get('/admin/network');
+        return response.data;
+    },
+
     updateUserRole: async (id, role) => {
         const response = await apiClient.put(`/admin/users/${id}/role`, { role });
         return response.data;
@@ -64,7 +69,32 @@ export const adminApi = {
     exportCommissions: async () => {
         const response = await apiClient.get('/admin/commissions/export');
         return response.data;
-    }
+    },
+
+    getApplications: async (page = 1, status = '') => {
+        const params = { page };
+        if (status) params.status = status;
+        const response = await apiClient.get('/admin/starcenter-applications', { params });
+        return response.data;
+    },
+
+    getApplication: async (id) => {
+        const response = await apiClient.get(`/admin/starcenter-applications/${id}`);
+        return response.data;
+    },
+
+    approveApplication: async (id) => {
+        const response = await apiClient.post(`/admin/starcenter-applications/${id}/approve`);
+        return response.data;
+    },
+
+    rejectApplication: async (id, reason) => {
+        const response = await apiClient.post(`/admin/starcenter-applications/${id}/reject`, { reason });
+        return response.data;
+    },
+
+    getApplicationDocumentUrl: (id, field) =>
+        `${import.meta.env.VITE_API_URL}/admin/starcenter-applications/${id}/document?field=${field}`,
 };
 
 export const userCommissionsApi = {

@@ -318,12 +318,6 @@ export default function Products() {
                     </div>
 
                     <button
-                        onClick={handleAddDummyData}
-                        className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium hidden md:block"
-                    >
-                        + Dummy Data
-                    </button>
-                    <button
                         onClick={openAddModal}
                         className="bg-[var(--color-accent)] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[var(--color-accent-dark)] transition-colors"
                     >

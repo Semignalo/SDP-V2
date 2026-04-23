@@ -122,14 +122,21 @@ class ProductController extends Controller
 
     /**
      * Delete a product (admin).
+     * Uses soft delete so order history referencing this product is preserved.
+     * Media files and records are only hard-deleted if the product has no orders.
      */
     public function destroy(int $id)
     {
         $product = Product::findOrFail($id);
 
-        // Delete associated media files
-        foreach ($product->media as $media) {
-            Storage::disk('public')->delete($media->file_path);
+        $hasOrders = $product->orderItems()->exists();
+
+        if (!$hasOrders) {
+            foreach ($product->media as $media) {
+                Storage::disk('public')->delete($media->file_path);
+            }
+            $product->media()->delete();
+            $product->variants()->delete();
         }
 
         $product->delete();

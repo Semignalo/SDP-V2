@@ -82,14 +82,14 @@ export default function ProductTable({ products, isGridView, onEdit, onDelete, l
                                     <div className="flex gap-1">
                                         <button
                                             onClick={() => onEdit(product)}
-                                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                                            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                                             title="Edit produk"
                                         >
                                             <Edit2 size={16} />
                                         </button>
                                         <button
                                             onClick={() => onDelete(product.id)}
-                                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                                            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
                                             title="Hapus produk"
                                         >
                                             <Trash2 size={16} />
@@ -188,14 +188,14 @@ export default function ProductTable({ products, isGridView, onEdit, onDelete, l
                                     <div className="flex justify-end gap-2">
                                         <button
                                             onClick={() => onEdit(product)}
-                                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                             title="Edit produk"
                                         >
                                             <Edit2 size={18} />
                                         </button>
                                         <button
                                             onClick={() => onDelete(product.id)}
-                                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                             title="Hapus produk"
                                         >
                                             <Trash2 size={18} />

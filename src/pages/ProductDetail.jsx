@@ -124,10 +124,10 @@ export default function ProductDetail() {
                     <div className="flex items-center gap-4 mb-6">
                         <div className="flex items-baseline gap-3">
                             <span className="text-2xl font-medium text-[var(--color-sale)]">
-                                Rp. {selectedVariant ? selectedVariant.price : product.price}
+                                Rp. {Number(selectedVariant ? selectedVariant.price : product.price).toLocaleString('id-ID')}
                             </span>
                             {product.originalPrice && !selectedVariant && (
-                                <span className="text-lg text-gray-400 line-through">Rp. {product.originalPrice}</span>
+                                <span className="text-lg text-gray-400 line-through">Rp. {Number(product.originalPrice).toLocaleString('id-ID')}</span>
                             )}
                         </div>
                         <div className="flex items-center gap-1">

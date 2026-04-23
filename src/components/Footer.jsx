@@ -17,10 +17,10 @@ export default function Footer() {
                     <p className="text-gray-400 text-sm max-w-md mx-auto mb-6">
                         The Gold standard of beauty. Designed in Japan, made for you.
                     </p>
-                    <div className="flex items-center justify-center space-x-6 text-gray-400">
-                        <a href="#" className="hover:text-[var(--color-accent)] transition-colors"><Instagram size={24} /></a>
-                        <a href="#" className="hover:text-[var(--color-accent)] transition-colors"><Facebook size={24} /></a>
-                        <a href="#" className="hover:text-[var(--color-accent)] transition-colors"><Youtube size={26} /></a>
+                    <div className="flex items-center justify-center space-x-2 text-gray-400">
+                        <a href="#" aria-label="Instagram" className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:text-[var(--color-accent)] transition-colors"><Instagram size={24} /></a>
+                        <a href="#" aria-label="Facebook" className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:text-[var(--color-accent)] transition-colors"><Facebook size={24} /></a>
+                        <a href="#" aria-label="Youtube" className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:text-[var(--color-accent)] transition-colors"><Youtube size={26} /></a>
                     </div>
                 </div>
 

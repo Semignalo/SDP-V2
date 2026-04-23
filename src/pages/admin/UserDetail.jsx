@@ -2,8 +2,102 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { adminApi } from '../../api/adminApi';
 import apiClient from '../../api/client';
-import { ArrowLeft, Lock, Shield, Zap, Users, ShoppingCart, TrendingUp, Copy, Check, X, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Lock, Shield, Zap, Users, Copy, Check, RefreshCw, ChevronRight, ChevronDown, GitBranch, List, ExternalLink } from 'lucide-react';
 import Swal from 'sweetalert2';
+
+// ─── Network tree helpers ─────────────────────────────────────────────────────
+
+function countDescendants(node) {
+    if (!node.children?.length) return 0;
+    return node.children.reduce((sum, child) => sum + 1 + countDescendants(child), 0);
+}
+
+function buildNetworkTree(rootUser, downlines) {
+    const map = {};
+    map[rootUser.id] = { ...rootUser, children: [], depth: 0 };
+    downlines.forEach(d => { map[d.id] = { ...d, children: [] }; });
+    downlines.forEach(d => {
+        const parentId = d.referrer_id;
+        if (parentId && map[parentId]) {
+            map[parentId].children.push(map[d.id]);
+        } else {
+            // orphan fallback: attach directly to root
+            map[rootUser.id].children.push(map[d.id]);
+        }
+    });
+    return map[rootUser.id];
+}
+
+const ROLE_CARD = {
+    admin:       'border-red-200 bg-red-50',
+    starcenter:  'border-purple-200 bg-purple-50',
+    regular:     'border-blue-200 bg-blue-50',
+};
+const ROLE_BADGE = {
+    admin:       'bg-red-100 text-red-700',
+    starcenter:  'bg-purple-100 text-purple-700',
+    regular:     'bg-blue-100 text-blue-700',
+};
+const ROLE_LABEL = { admin: 'Admin', starcenter: 'Starcenter', regular: 'Regular' };
+
+function NetworkTreeNode({ node, isRoot = false }) {
+    const navigate = useNavigate();
+    const [collapsed, setCollapsed] = useState(!isRoot && node.depth >= 2);
+    const hasChildren = node.children?.length > 0;
+    const totalDesc = hasChildren ? countDescendants(node) : 0;
+
+    return (
+        <div>
+            <div className="flex items-start gap-2">
+                {/* Expand / collapse toggle */}
+                <button
+                    onClick={() => hasChildren && setCollapsed(c => !c)}
+                    className={`mt-3 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition
+                        ${hasChildren ? 'bg-gray-200 hover:bg-gray-300 cursor-pointer' : 'opacity-0 pointer-events-none'}`}
+                    title={collapsed ? 'Tampilkan downline' : 'Sembunyikan downline'}
+                >
+                    {collapsed ? <ChevronRight size={11} /> : <ChevronDown size={11} />}
+                </button>
+
+                {/* Node card */}
+                <div
+                    className={`flex-1 border rounded-xl px-3 py-2.5 transition
+                        ${isRoot
+                            ? 'border-emerald-300 bg-emerald-50 shadow-sm'
+                            : `${ROLE_CARD[node.role] || 'border-gray-200 bg-gray-50'} cursor-pointer hover:shadow-sm`
+                        }`}
+                    onClick={() => !isRoot && navigate(`/admin/users/${node.id}`)}
+                >
+                    <div className="flex items-center justify-between gap-2 min-w-0">
+                        <span className="font-medium text-sm text-gray-900 truncate">{node.name}</span>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+                                ${isRoot ? 'bg-emerald-100 text-emerald-700' : (ROLE_BADGE[node.role] || 'bg-gray-100 text-gray-600')}`}>
+                                {isRoot ? (ROLE_LABEL[node.role] || node.role) + ' (root)' : (ROLE_LABEL[node.role] || node.role)}
+                            </span>
+                            {!isRoot && <ExternalLink size={13} className="text-gray-400" />}
+                        </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5 truncate">{node.email}</p>
+                    {hasChildren && (
+                        <p className="text-xs text-gray-400 mt-1">
+                            {node.children.length} langsung · {totalDesc} total downline
+                        </p>
+                    )}
+                </div>
+            </div>
+
+            {/* Children */}
+            {!collapsed && hasChildren && (
+                <div className="ml-[10px] pl-5 mt-1.5 space-y-1.5 border-l-2 border-dashed border-gray-200">
+                    {node.children.map(child => (
+                        <NetworkTreeNode key={child.id} node={child} />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function UserDetail() {
     const { id } = useParams();
@@ -20,6 +114,7 @@ export default function UserDetail() {
     const [newRole, setNewRole] = useState('');
     const [newTierId, setNewTierId] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [networkView, setNetworkView] = useState('tree');
 
     useEffect(() => {
         fetchUserDetail();
@@ -160,17 +255,24 @@ export default function UserDetail() {
 
             {/* Tabs */}
             <div className="flex gap-2 mb-6 border-b border-gray-200">
-                {['profile', 'access', 'password', 'network', 'orders', 'commissions'].map(tab => (
+                {[
+                    { key: 'profile', label: 'Profil' },
+                    { key: 'access', label: 'Akses' },
+                    { key: 'password', label: 'Password' },
+                    { key: 'network', label: network ? `Jaringan (${network.total_downlines})` : 'Jaringan' },
+                    { key: 'orders', label: 'Pesanan' },
+                    { key: 'commissions', label: 'Komisi' },
+                ].map(({ key, label }) => (
                     <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`px-4 py-2 font-medium transition-colors capitalize border-b-2 ${
-                            activeTab === tab
+                        key={key}
+                        onClick={() => setActiveTab(key)}
+                        className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                            activeTab === key
                                 ? 'border-blue-600 text-blue-600'
                                 : 'border-transparent text-gray-600 hover:text-gray-900'
                         }`}
                     >
-                        {tab === 'network' && network ? `Network (${network.total_downlines})` : tab}
+                        {label}
                     </button>
                 ))}
             </div>
@@ -206,7 +308,7 @@ export default function UserDetail() {
                                 {user.referral_code && (
                                     <button
                                         onClick={() => copyToClipboard(user.referral_code)}
-                                        className="p-1 hover:bg-gray-100 rounded transition"
+                                        className="p-1 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-100 rounded transition"
                                         title="Copy"
                                     >
                                         <Copy size={16} className="text-gray-400" />
@@ -333,48 +435,140 @@ export default function UserDetail() {
             )}
 
             {/* Network Tab */}
-            {activeTab === 'network' && network && (
-                <div className="space-y-6">
-                    {network.uplines.length > 0 && (
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                            <h3 className="text-lg font-bold text-gray-900 mb-4">Upline Chain</h3>
-                            <div className="space-y-2">
-                                {network.uplines.map(upline => (
-                                    <div key={upline.id} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                        <p className="text-sm font-medium text-gray-900">{upline.name}</p>
-                                        <p className="text-xs text-gray-500">{upline.email} • Level {upline.depth}</p>
+            {activeTab === 'network' && network && (() => {
+                // Level breakdown
+                const levelCounts = {};
+                network.downlines.forEach(d => {
+                    levelCounts[d.depth] = (levelCounts[d.depth] || 0) + 1;
+                });
+                const treeRoot = network.downlines.length > 0 ? buildNetworkTree(user, network.downlines) : null;
+
+                return (
+                    <div className="space-y-5">
+                        {/* Stats bar */}
+                        {network.downlines.length > 0 && (
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                                    <p className="text-xs text-gray-500 font-medium">Total Downline</p>
+                                    <p className="text-2xl font-bold text-gray-900 mt-1">{network.total_downlines}</p>
+                                </div>
+                                {Object.entries(levelCounts).slice(0, 3).map(([lvl, cnt]) => (
+                                    <div key={lvl} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                                        <p className="text-xs text-gray-500 font-medium">Level {lvl}</p>
+                                        <p className="text-2xl font-bold text-purple-700 mt-1">{cnt}</p>
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {network.downlines.length > 0 && (
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                <Users size={20} /> Downline ({network.downlines.length})
-                            </h3>
-                            <div className="space-y-2">
-                                {network.downlines.map(downline => (
-                                    <div key={downline.id} className="p-3 bg-green-50 rounded-lg border border-green-200 flex justify-between items-start">
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">{downline.name}</p>
-                                            <p className="text-xs text-gray-500">{downline.email}</p>
+                        {/* Upline chain */}
+                        {network.uplines.length > 0 && (
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3">Upline Chain</h3>
+                                <div className="flex flex-col gap-1.5">
+                                    {network.uplines.map((upline, i) => (
+                                        <div key={upline.id} className="flex items-center gap-3">
+                                            {i > 0 && <div className="w-4 h-px bg-gray-300 ml-4" />}
+                                            <div
+                                                className="flex-1 flex items-center justify-between gap-2 p-2.5 rounded-lg border border-blue-200 bg-blue-50 cursor-pointer hover:shadow-sm transition"
+                                                onClick={() => navigate(`/admin/users/${upline.id}`)}
+                                            >
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-medium text-gray-900 truncate">{upline.name}</p>
+                                                    <p className="text-xs text-gray-500 truncate">{upline.email}</p>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROLE_BADGE[upline.role] || 'bg-gray-100 text-gray-600'}`}>
+                                                        {ROLE_LABEL[upline.role] || upline.role}
+                                                    </span>
+                                                    <span className="text-xs text-gray-400">L{upline.depth}</span>
+                                                    <ExternalLink size={12} className="text-gray-400" />
+                                                </div>
+                                            </div>
                                         </div>
-                                        <span className="text-xs font-semibold text-green-700 bg-green-100 px-2 py-1 rounded">Level {downline.depth}</span>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {network.downlines.length === 0 && network.uplines.length === 0 && (
-                        <div className="bg-gray-50 rounded-xl p-6 text-center text-gray-500">
-                            User ini bukan starcenter atau tidak memiliki jaringan.
-                        </div>
-                    )}
-                </div>
-            )}
+                        {/* Downline section */}
+                        {network.downlines.length > 0 ? (
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                {/* Header + toggle */}
+                                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                                        <Users size={18} />
+                                        Jaringan Downline
+                                        <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                                            {network.total_downlines}
+                                        </span>
+                                    </h3>
+                                    <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                                        <button
+                                            onClick={() => setNetworkView('list')}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition
+                                                ${networkView === 'list' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                                        >
+                                            <List size={13} /> List
+                                        </button>
+                                        <button
+                                            onClick={() => setNetworkView('tree')}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition
+                                                ${networkView === 'tree' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                                        >
+                                            <GitBranch size={13} /> Pohon
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="p-5">
+                                    {/* List view */}
+                                    {networkView === 'list' && (
+                                        <div className="space-y-2">
+                                            {network.downlines.map(downline => (
+                                                <div
+                                                    key={downline.id}
+                                                    className="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-100 bg-gray-50 hover:shadow-sm cursor-pointer transition"
+                                                    onClick={() => navigate(`/admin/users/${downline.id}`)}
+                                                >
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-medium text-gray-900 truncate">{downline.name}</p>
+                                                        <p className="text-xs text-gray-500 truncate">{downline.email}</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROLE_BADGE[downline.role] || 'bg-gray-100 text-gray-600'}`}>
+                                                            {ROLE_LABEL[downline.role] || downline.role}
+                                                        </span>
+                                                        <span className="text-xs font-semibold text-gray-500 bg-white border border-gray-200 px-2 py-0.5 rounded-full">
+                                                            L{downline.depth}
+                                                        </span>
+                                                        <ExternalLink size={13} className="text-gray-400" />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Tree view */}
+                                    {networkView === 'tree' && treeRoot && (
+                                        <div className="space-y-2">
+                                            <p className="text-xs text-gray-400 mb-3">
+                                                Klik node untuk buka detail · Klik ▶ untuk expand/collapse
+                                            </p>
+                                            <NetworkTreeNode node={treeRoot} isRoot />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-gray-50 rounded-xl p-8 text-center text-gray-400">
+                                <GitBranch size={32} className="mx-auto mb-2 opacity-40" />
+                                <p className="text-sm">Belum ada downline dalam jaringan ini.</p>
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
 
             {/* Orders Tab */}
             {activeTab === 'orders' && user.orders && (

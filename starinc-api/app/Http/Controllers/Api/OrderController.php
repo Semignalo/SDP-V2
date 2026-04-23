@@ -93,8 +93,9 @@ class OrderController extends Controller
             'account_name' => SystemSetting::getValue('payment_account_name', 'PT BBK'),
         ];
 
-        // Strip internal PK from response to prevent IDOR facilitation
+        // Expose id as order_id for payment proof upload; strip user_id to prevent enumeration
         $orderData = $order->toArray();
+        $orderData['order_id'] = $orderData['id'];
         unset($orderData['id'], $orderData['user_id']);
 
         return response()->json([

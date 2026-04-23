@@ -61,15 +61,15 @@ function VideoUploadField({ label, fieldName, value, onChange, hint }) {
         <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 block">{label}</label>
             {hint && <p className="text-xs text-gray-500">{hint}</p>}
-            <div className="flex gap-4 items-center">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                 <input
                     name={fieldName}
                     value={value || ''}
                     onChange={(e) => onChange(fieldName, e.target.value)}
-                    className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-mono text-xs"
+                    className="flex-1 min-w-0 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-mono text-xs"
                     placeholder="Paste video URL atau upload di bawah"
                 />
-                <label className="cursor-pointer bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2">
+                <label className="cursor-pointer bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 shrink-0">
                     <Upload size={16} /> Upload Video
                     <input
                         type="file"
@@ -167,7 +167,7 @@ export default function AdminAppearance() {
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-8">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800">Concept Appearance</h1>
                     <p className="text-gray-500 mt-1">Sesuaikan tampilan halaman depan website Anda.</p>
@@ -175,7 +175,7 @@ export default function AdminAppearance() {
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center gap-2 bg-[#111827] hover:bg-black text-white px-6 py-2.5 rounded-lg font-medium transition-all disabled:opacity-50 shadow-sm"
+                    className="flex items-center justify-center gap-2 bg-[#111827] hover:bg-black text-white px-6 py-2.5 rounded-lg font-medium transition-all disabled:opacity-50 shadow-sm shrink-0"
                 >
                     <Save size={18} />
                     {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
@@ -233,7 +233,7 @@ export default function AdminAppearance() {
                                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-mono text-xs text-gray-600"
                                         placeholder="Paste video URL atau upload di bawah..."
                                     />
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                                         <HeroVideoUploader
                                             onChange={(url) => handleFieldChange('heroVideoUrl', url)}
                                         />

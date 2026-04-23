@@ -1,117 +1,120 @@
 # Akun Dummy SDP-V2
 
-Database telah direset dan dikonfigurasi dengan akun dummy berikut:
+Database dikonfigurasi dengan akun dummy berikut. Semua data diverifikasi langsung dari database.
+
+---
 
 ## Admin Account
-| Email | Password | Role | Notes |
-|-------|----------|------|-------|
-| admin@starinc.id | password123 | Admin | Akun admin utama |
 
-## Starcenter Accounts (Regional)
+| ID | Email | Password | Role | Tier |
+|----|-------|----------|------|------|
+| 1 | admin@starinc.id | **password** | admin | Diamond |
 
-### SC Jawa Timur
-| Email | Password | Role | Referral Code | Tier | Notes |
-|-------|----------|------|----------------|------|-------|
-| sc.jawatimur@starinc.com | password123 | Starcenter | SCJT001 | Diamond | SC Regional Jawa Timur |
-
-**Downlines SC Jawa Timur:**
-- Email: downline.1.1@starinc.com | Password: password123 | Role: Regular
-- Email: downline.1.2@starinc.com | Password: password123 | Role: Regular
-- Email: downline.1.3@starinc.com | Password: password123 | Role: Regular
+> ⚠️ Password admin adalah `password`, bukan `password123`
 
 ---
 
-### SC Jawa Tengah
-| Email | Password | Role | Referral Code | Tier | Notes |
-|-------|----------|------|----------------|------|-------|
-| sc.jawatengah@starinc.com | password123 | Starcenter | SCJG001 | Diamond | SC Regional Jawa Tengah |
+## Starcenter Accounts
 
-**Downlines SC Jawa Tengah:**
-- Email: downline.2.1@starinc.com | Password: password123 | Role: Regular
-- Email: downline.2.2@starinc.com | Password: password123 | Role: Regular
-- Email: downline.2.3@starinc.com | Password: password123 | Role: Regular
+| ID | Email | Password | Role | Referral Code | Tier | Region |
+|----|-------|----------|------|----------------|------|--------|
+| 2 | sc.jawatimur@starinc.com | password123 | starcenter | SCJT001 | Diamond | Jawa Timur |
+| 3 | sc.jawatengah@starinc.com | password123 | starcenter | SCJG001 | Diamond | Jawa Tengah |
+| 4 | sc.jawabarat@starinc.com | password123 | starcenter | SCJB001 | Diamond | Jawa Barat |
 
 ---
 
-### SC Jawa Barat
-| Email | Password | Role | Referral Code | Tier | Notes |
-|-------|----------|------|----------------|------|-------|
-| sc.jawabarat@starinc.com | password123 | Starcenter | SCJB001 | Diamond | SC Regional Jawa Barat |
+## Regular / Downline Accounts
 
-**Downlines SC Jawa Barat:**
-- Email: downline.3.1@starinc.com | Password: password123 | Role: Regular
-- Email: downline.3.2@starinc.com | Password: password123 | Role: Regular
-- Email: downline.3.3@starinc.com | Password: password123 | Role: Regular
+### Downlines SC Jawa Timur (referrer: sc.jawatimur@starinc.com)
 
----
+| ID | Email | Password | Role | Referral Code | Tier |
+|----|-------|----------|------|----------------|------|
+| 5 | downline.2.1@starinc.com | password123 | regular | 4VSTPKSO | Bronze |
+| 6 | downline.2.2@starinc.com | password123 | regular | MEBHM7UD | Gold |
+| 7 | downline.2.3@starinc.com | password123 | regular | WOC34U2U | Gold |
 
-## Data Transaksi (Transactions)
+### Downlines SC Jawa Tengah (referrer: sc.jawatengah@starinc.com)
 
-Setiap akun downline memiliki transaksi dengan status berbeda:
+| ID | Email | Password | Role | Referral Code | Tier |
+|----|-------|----------|------|----------------|------|
+| 8 | downline.3.1@starinc.com | password123 | regular | SNSY421V | Gold |
+| 9 | downline.3.2@starinc.com | password123 | regular | REZUUGYV | Silver |
+| 10 | downline.3.3@starinc.com | password123 | regular | 3IXJFLXG | Silver |
 
-### Status Transaksi:
-- **pending_payment** - Menunggu verifikasi pembayaran
-- **processing** - Sedang diproses
-- **shipped** - Telah dikirim
-- **completed** - Selesai
-- **rejected** - Ditolak
+### Downlines SC Jawa Barat (referrer: sc.jawabarat@starinc.com)
 
-### Distribusi Transaksi:
-- 70% transaksi dengan status **completed**
-- 15% transaksi dengan status **processing** atau **shipped**
-- 10% transaksi dengan status **pending_payment**
-- 5% transaksi dengan status **rejected**
-
-Total: ±120 transaksi tersebar di semua akun.
+| ID | Email | Password | Role | Referral Code | Tier |
+|----|-------|----------|------|----------------|------|
+| 11 | downline.4.1@starinc.com | password123 | regular | EBTPUUOP | Gold |
+| 12 | downline.4.2@starinc.com | password123 | regular | GFPYPZIX | Silver |
+| 13 | downline.4.3@starinc.com | password123 | regular | 50IKOWRK | Silver |
 
 ---
 
-## Akses ke Admin Panel
+## Ringkasan Password
 
-1. Buka URL: `http://localhost:8000/admin`
-2. Login dengan:
-   - Email: `admin@starinc.id`
-   - Password: `password123`
-
-Dari admin panel, Anda dapat:
-- Melihat semua user dan network mereka
-- Melihat transaksi dengan berbagai status
-- Melihat komisi yang didistribusikan
-- Edit user roles, tiers, dan passwords
+| Akun | Password |
+|------|----------|
+| Admin (admin@starinc.id) | `password` |
+| Semua akun lainnya (SC + downline) | `password123` |
 
 ---
 
-## Testing Tips
+## Tier System
 
-### View Network Structure
-```bash
-http://localhost:8000/admin/users/{id}/network
-```
-Ganti `{id}` dengan ID dari SC user untuk melihat struktur downline.
-
-### View User Transactions
-```bash
-http://localhost:8000/admin/users/{id}/orders
-```
-Ganti `{id}` dengan ID dari user untuk melihat semua transaksinya.
-
-### View User Commissions
-```bash
-http://localhost:8000/admin/users/{id}/commissions
-```
-Ganti `{id}` dengan ID dari user untuk melihat komisi yang diterima.
+| Tier ID | Nama |
+|---------|------|
+| 1 | Bronze |
+| 2 | Silver |
+| 3 | Gold |
+| 4 | Platinum |
+| 5 | Diamond |
 
 ---
 
-## Notes
+## Data Transaksi
 
-- **Password**: Semua akun menggunakan password `password123`
-- **Database**: SQLite (auto-reset saat menjalankan `php artisan migrate:fresh --seed`)
-- **API Base URL**: `http://localhost:8000/api`
-- **Frontend Base URL**: `http://localhost:3000` (Vite dev server)
+Setiap akun downline memiliki transaksi dengan status berbeda (±120 total):
 
-Untuk reset database dan data kembali ke initial state:
+| Status | Distribusi |
+|--------|-----------|
+| completed | ~70% |
+| processing / shipped | ~15% |
+| pending_payment | ~10% |
+| rejected | ~5% |
+
+---
+
+## Akses
+
+| URL | Keterangan |
+|-----|-----------|
+| `http://localhost:5173` | Frontend (Vite dev server) |
+| `http://localhost:5173/admin` | Admin panel |
+| `http://localhost:8000/api` | Backend API |
+
+Login admin panel: `admin@starinc.id` / `password`
+
+---
+
+## Playwright Profiles (Pre-authenticated)
+
+Tersedia di `.playwright/profiles/`:
+
+| File | Email | Role |
+|------|-------|------|
+| admin.json | admin@starinc.id | admin |
+| starcenter.json | sc.jawatimur@starinc.com | starcenter |
+| regular.json | downline.2.1@starinc.com | regular |
+
+---
+
+## Reset Database
+
 ```bash
 cd starinc-api
 php artisan migrate:fresh --seed
 ```
+
+> Catatan: Setelah reset, Playwright profiles perlu di-regenerate karena token Sanctum akan berubah.

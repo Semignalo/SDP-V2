@@ -167,8 +167,8 @@ export default function Orders() {
             // Update payment proof in selectedOrder
             setSelectedOrder({
                 ...selectedOrder,
-                paymentProof: {
-                    ...selectedOrder.paymentProof,
+                payment_proof: {
+                    ...selectedOrder.payment_proof,
                     status: paymentReviewStatus,
                     admin_notes: paymentReviewNotes,
                     reviewed_at: new Date()
@@ -491,7 +491,7 @@ export default function Orders() {
                             </div>
 
                             {/* Payment Proof Review */}
-                            {selectedOrder.paymentProof && (
+                            {selectedOrder.payment_proof && (
                                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                                     <h3 className="text-sm font-semibold text-blue-900 mb-3">📋 Bukti Pembayaran</h3>
                                     <div className="space-y-3">
@@ -499,30 +499,30 @@ export default function Orders() {
                                             <div>
                                                 <p className="text-sm text-blue-800">
                                                     <span className="font-medium">Status:</span>
-                                                    {selectedOrder.paymentProof.status === 'pending' && (
+                                                    {selectedOrder.payment_proof.status === 'pending' && (
                                                         <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">Menunggu Review</span>
                                                     )}
-                                                    {selectedOrder.paymentProof.status === 'approved' && (
+                                                    {selectedOrder.payment_proof.status === 'approved' && (
                                                         <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">Disetujui</span>
                                                     )}
-                                                    {selectedOrder.paymentProof.status === 'rejected' && (
+                                                    {selectedOrder.payment_proof.status === 'rejected' && (
                                                         <span className="ml-2 px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-medium">Ditolak</span>
                                                     )}
                                                 </p>
                                             </div>
                                             <button
-                                                onClick={() => openPaymentProof(selectedOrder.paymentProof.id)}
+                                                onClick={() => openPaymentProof(selectedOrder.payment_proof.id)}
                                                 className="px-3 py-1 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 flex items-center gap-1"
                                             >
                                                 <FileText size={14} /> Lihat File
                                             </button>
                                         </div>
-                                        {selectedOrder.paymentProof.admin_notes && (
+                                        {selectedOrder.payment_proof.admin_notes && (
                                             <p className="text-xs text-blue-700 bg-white p-2 rounded border border-blue-200">
-                                                <strong>Catatan Admin:</strong> {selectedOrder.paymentProof.admin_notes}
+                                                <strong>Catatan Admin:</strong> {selectedOrder.payment_proof.admin_notes}
                                             </p>
                                         )}
-                                        {selectedOrder.paymentProof.status === 'pending' && (
+                                        {selectedOrder.payment_proof.status === 'pending' && (
                                             <button
                                                 onClick={() => setPaymentReviewModal(true)}
                                                 className="w-full px-3 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition"
@@ -640,7 +640,7 @@ export default function Orders() {
             )}
 
             {/* Payment Review Modal */}
-            {paymentReviewModal && selectedOrder?.paymentProof && (
+            {paymentReviewModal && selectedOrder?.payment_proof && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
                         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
@@ -655,7 +655,7 @@ export default function Orders() {
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">File Bukti</label>
                                 <button
-                                    onClick={() => openPaymentProof(selectedOrder.paymentProof.id)}
+                                    onClick={() => openPaymentProof(selectedOrder.payment_proof.id)}
                                     className="w-full px-4 py-3 border-2 border-dashed border-blue-200 rounded-lg hover:bg-blue-50 transition flex items-center justify-center gap-2 text-blue-600 font-medium text-sm"
                                 >
                                     <FileText size={18} /> Buka File Bukti Pembayaran

@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\StarCenterApplicationController;
 use App\Http\Middleware\EnsureIsAdmin;
 use App\Models\Tier;
 use Illuminate\Support\Facades\Route;
@@ -18,7 +19,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('throttle:5,1')->group(function () {
+Route::middleware('throttle:30,1')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
 });
@@ -38,10 +39,17 @@ Route::get('/settings/payment', [SettingsController::class, 'paymentInfo']);
 // Invoice (auth required — ownership checked in controller)
 // Moved out of public block: CRIT-1 fix — invoice exposed full PII without auth
 
+// Referral code lookup (public — used on register form)
+Route::get('/referral/{code}', [AuthController::class, 'lookupReferral']);
+
 // Tiers list (public)
 Route::get('/tiers', function () {
     return response()->json(Tier::orderBy('sort_order')->get());
 });
+
+// Starcenter applications (public submission)
+Route::get('/starcenter-applications/check-name', [StarCenterApplicationController::class, 'checkCenterName']);
+Route::post('/starcenter-applications', [StarCenterApplicationController::class, 'store']);
 
 /*
 |--------------------------------------------------------------------------
@@ -99,6 +107,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Users
         Route::get('/users', [AdminController::class, 'users']);
+        Route::get('/network', [AdminController::class, 'networkTree']);
         Route::get('/users/{id}', [AdminController::class, 'showUser']);
         Route::put('/users/{id}/role', [AdminController::class, 'updateUserRole']);
         Route::put('/users/{id}/password', [AdminController::class, 'updateUserPassword']);
@@ -116,6 +125,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Media Upload (for Appearance page video/image upload)
         Route::post('/upload', [SettingsController::class, 'upload']);
+
+        // Starcenter Applications
+        Route::get('/starcenter-applications', [StarCenterApplicationController::class, 'index']);
+        Route::get('/starcenter-applications/{id}', [StarCenterApplicationController::class, 'show']);
+        Route::get('/starcenter-applications/{id}/document', [StarCenterApplicationController::class, 'serveDocument']);
+        Route::post('/starcenter-applications/{id}/approve', [StarCenterApplicationController::class, 'approve']);
+        Route::post('/starcenter-applications/{id}/reject', [StarCenterApplicationController::class, 'reject']);
 
         // Settings
         Route::get('/settings', [SettingsController::class, 'adminSettings']);

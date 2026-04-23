@@ -1,20 +1,22 @@
 {
   "info": {
-    "created_at": "2026-04-20",
+    "verified_at": "2026-04-21",
     "database": "SQLite (starinc-api/database/database.sqlite)",
-    "default_password": "password123",
-    "total_accounts": 12,
+    "total_accounts": 13,
     "total_transactions": "~120",
-    "api_base_url": "http://localhost:8000/api"
+    "api_base_url": "http://localhost:8000/api",
+    "frontend_url": "http://localhost:5173",
+    "note": "Admin password is 'password', all other accounts use 'password123'"
   },
   "admin_accounts": [
     {
       "id": 1,
       "email": "admin@starinc.id",
-      "password": "password123",
+      "password": "password",
       "name": "Admin Starinc",
       "role": "admin",
-      "tier": "N/A"
+      "referral_code": "4QWAWPDQ",
+      "tier": "Diamond"
     }
   ],
   "starcenter_accounts": [
@@ -25,13 +27,12 @@
       "name": "SC Jawa Timur",
       "role": "starcenter",
       "referral_code": "SCJT001",
-      "tier": "diamond",
+      "tier": "Diamond",
       "region": "Jawa Timur",
-      "downlines": 3,
-      "downline_emails": [
-        "downline.2.1@starinc.com",
-        "downline.2.2@starinc.com",
-        "downline.2.3@starinc.com"
+      "downlines": [
+        { "id": 5, "email": "downline.2.1@starinc.com" },
+        { "id": 6, "email": "downline.2.2@starinc.com" },
+        { "id": 7, "email": "downline.2.3@starinc.com" }
       ]
     },
     {
@@ -41,13 +42,12 @@
       "name": "SC Jawa Tengah",
       "role": "starcenter",
       "referral_code": "SCJG001",
-      "tier": "diamond",
+      "tier": "Diamond",
       "region": "Jawa Tengah",
-      "downlines": 3,
-      "downline_emails": [
-        "downline.3.1@starinc.com",
-        "downline.3.2@starinc.com",
-        "downline.3.3@starinc.com"
+      "downlines": [
+        { "id": 8, "email": "downline.3.1@starinc.com" },
+        { "id": 9, "email": "downline.3.2@starinc.com" },
+        { "id": 10, "email": "downline.3.3@starinc.com" }
       ]
     },
     {
@@ -57,36 +57,37 @@
       "name": "SC Jawa Barat",
       "role": "starcenter",
       "referral_code": "SCJB001",
-      "tier": "diamond",
+      "tier": "Diamond",
       "region": "Jawa Barat",
-      "downlines": 3,
-      "downline_emails": [
-        "downline.4.1@starinc.com",
-        "downline.4.2@starinc.com",
-        "downline.4.3@starinc.com"
+      "downlines": [
+        { "id": 11, "email": "downline.4.1@starinc.com" },
+        { "id": 12, "email": "downline.4.2@starinc.com" },
+        { "id": 13, "email": "downline.4.3@starinc.com" }
       ]
     }
   ],
-  "transaction_statistics": {
-    "total_orders": "~120",
-    "status_distribution": {
-      "completed": "70%",
-      "processing_or_shipped": "15%",
-      "pending_payment": "10%",
-      "rejected": "5%"
-    }
+  "regular_accounts": [
+    { "id": 5, "email": "downline.2.1@starinc.com", "password": "password123", "role": "regular", "referral_code": "4VSTPKSO", "tier": "Bronze", "referrer": "sc.jawatimur@starinc.com" },
+    { "id": 6, "email": "downline.2.2@starinc.com", "password": "password123", "role": "regular", "referral_code": "MEBHM7UD", "tier": "Gold",   "referrer": "sc.jawatimur@starinc.com" },
+    { "id": 7, "email": "downline.2.3@starinc.com", "password": "password123", "role": "regular", "referral_code": "WOC34U2U", "tier": "Gold",   "referrer": "sc.jawatimur@starinc.com" },
+    { "id": 8, "email": "downline.3.1@starinc.com", "password": "password123", "role": "regular", "referral_code": "SNSY421V", "tier": "Gold",   "referrer": "sc.jawatengah@starinc.com" },
+    { "id": 9, "email": "downline.3.2@starinc.com", "password": "password123", "role": "regular", "referral_code": "REZUUGYV", "tier": "Silver", "referrer": "sc.jawatengah@starinc.com" },
+    { "id": 10, "email": "downline.3.3@starinc.com", "password": "password123", "role": "regular", "referral_code": "3IXJFLXG", "tier": "Silver", "referrer": "sc.jawatengah@starinc.com" },
+    { "id": 11, "email": "downline.4.1@starinc.com", "password": "password123", "role": "regular", "referral_code": "EBTPUUOP", "tier": "Gold",   "referrer": "sc.jawabarat@starinc.com" },
+    { "id": 12, "email": "downline.4.2@starinc.com", "password": "password123", "role": "regular", "referral_code": "GFPYPZIX", "tier": "Silver", "referrer": "sc.jawabarat@starinc.com" },
+    { "id": 13, "email": "downline.4.3@starinc.com", "password": "password123", "role": "regular", "referral_code": "50IKOWRK", "tier": "Silver", "referrer": "sc.jawabarat@starinc.com" }
+  ],
+  "playwright_profiles": {
+    "admin":      { "file": ".playwright/profiles/admin.json",      "email": "admin@starinc.id",             "password": "password"   },
+    "starcenter": { "file": ".playwright/profiles/starcenter.json",  "email": "sc.jawatimur@starinc.com",     "password": "password123" },
+    "regular":    { "file": ".playwright/profiles/regular.json",     "email": "downline.2.1@starinc.com",     "password": "password123" }
   },
-  "quick_links": {
-    "admin_dashboard": "http://localhost:8000/admin",
-    "login": "http://localhost:8000/login",
-    "api_docs": "http://localhost:8000/api/docs",
-    "frontend": "http://localhost:3000"
-  },
-  "testing_endpoints": {
-    "get_admin_users": "GET /api/admin/users",
-    "get_user_network": "GET /api/admin/users/{id}/network",
-    "get_user_orders": "GET /api/admin/users/{id}/orders",
-    "get_user_commissions": "GET /api/admin/users/{id}/commissions"
-  },
+  "tiers": [
+    { "id": 1, "name": "Bronze" },
+    { "id": 2, "name": "Silver" },
+    { "id": 3, "name": "Gold"   },
+    { "id": 4, "name": "Platinum" },
+    { "id": 5, "name": "Diamond"  }
+  ],
   "reset_command": "cd starinc-api && php artisan migrate:fresh --seed"
 }

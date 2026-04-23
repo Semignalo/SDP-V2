@@ -173,7 +173,7 @@ export default function Checkout() {
                 timer: 2000,
                 showConfirmButton: false
             }).then(() => {
-                navigate(`/invoice/${response.order_number}`);
+                navigate(`/invoice/${response.data.order_number}`);
             });
 
         } catch (error) {
@@ -222,7 +222,8 @@ export default function Checkout() {
                                 name="name"
                                 value={formData.name}
                                 onChange={handleInputChange}
-                                className="w-full px-4 py-2 border border-gray-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+                                autoComplete="name"
+                                className="w-full px-4 py-2 border border-gray-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black text-base"
                                 placeholder="John Doe"
                             />
                         </div>
@@ -234,7 +235,8 @@ export default function Checkout() {
                                 name="phone"
                                 value={formData.phone}
                                 onChange={handleInputChange}
-                                className="w-full px-4 py-2 border border-gray-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+                                autoComplete="tel"
+                                className="w-full px-4 py-2 border border-gray-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black text-base"
                                 placeholder="+62 812 3456 7890"
                             />
                         </div>
@@ -246,7 +248,8 @@ export default function Checkout() {
                                 value={formData.address}
                                 onChange={handleInputChange}
                                 rows="3"
-                                className="w-full px-4 py-2 border border-gray-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black resize-none"
+                                autoComplete="street-address"
+                                className="w-full px-4 py-2 border border-gray-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black resize-none text-base"
                                 placeholder="Street name, house number"
                             ></textarea>
                         </div>
@@ -259,7 +262,8 @@ export default function Checkout() {
                                     name="city"
                                     value={formData.city}
                                     onChange={handleInputChange}
-                                    className="w-full px-4 py-2 border border-gray-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+                                    autoComplete="address-level2"
+                                    className="w-full px-4 py-2 border border-gray-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black text-base"
                                     placeholder="Jakarta Selatan"
                                 />
                             </div>
@@ -271,7 +275,9 @@ export default function Checkout() {
                                     name="postalCode"
                                     value={formData.postalCode}
                                     onChange={handleInputChange}
-                                    className="w-full px-4 py-2 border border-gray-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+                                    autoComplete="postal-code"
+                                    inputMode="numeric"
+                                    className="w-full px-4 py-2 border border-gray-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black text-base"
                                     placeholder="12345"
                                 />
                             </div>

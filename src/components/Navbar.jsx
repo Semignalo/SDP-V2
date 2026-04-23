@@ -141,7 +141,8 @@ export default function Navbar() {
                             { name: 'Pesanan Saya', path: '/orders' },
                             { name: 'Our concept', path: '/about' },
                             ...(currentUser ? [{ name: 'Profil Saya', path: '/profile' }] : []),
-                            ...(userRole === 'center' ? [{ name: 'Center Shop', path: '/center' }] : [])
+                            ...(userRole === 'center' ? [{ name: 'Center Shop', path: '/center' }] : []),
+                            ...(!currentUser ? [{ name: 'Daftar Center', path: '/daftar-center' }] : [])
                         ].map((item) => (
                             <li key={item.name}>
                                 <Link

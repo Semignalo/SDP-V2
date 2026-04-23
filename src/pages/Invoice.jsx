@@ -64,7 +64,7 @@ export default function Invoice() {
 
         setUploadingProof(true);
         try {
-            await orderApi.uploadPaymentProof(order.id, file);
+            await orderApi.uploadPaymentProof(order.order_id, file);
             Swal.fire('Berhasil!', 'Bukti pembayaran berhasil diunggah dan sedang diverifikasi.', 'success');
         } catch (err) {
             Swal.fire('Gagal', getErrorMessage(err), 'error');

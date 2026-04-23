@@ -13,7 +13,6 @@ class DatabaseSeeder extends Seeder
             SystemSettingSeeder::class,
             AppearanceSeeder::class,
             AdminUserSeeder::class,
-            DummyDataSeeder::class,
         ]);
     }
 }

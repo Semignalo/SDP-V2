@@ -35,6 +35,11 @@ export const authApi = {
         return response.data;
     },
 
+    lookupReferral: async (code) => {
+        const response = await apiClient.get(`/referral/${code}`);
+        return response.data;
+    },
+
     forgotPassword: async (email) => {
         const response = await apiClient.post('/forgot-password', { email });
         return response.data;

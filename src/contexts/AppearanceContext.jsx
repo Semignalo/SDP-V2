@@ -4,6 +4,20 @@ import { settingsApi } from '../api/settingsApi';
 
 const AppearanceContext = createContext();
 
+// Derive storage base from VITE_API_URL so storage URLs always match the current server
+const STORAGE_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace(/\/api\/?$/, '');
+
+function normalizeStorageUrls(data) {
+    return Object.fromEntries(
+        Object.entries(data).map(([key, val]) => {
+            if (typeof val === 'string' && /\/storage\//.test(val)) {
+                val = val.replace(/^https?:\/\/[^/]+/, STORAGE_BASE);
+            }
+            return [key, val];
+        })
+    );
+}
+
 // Cache TTL: 5 menit (dalam milidetik)
 const CACHE_TTL = 5 * 60 * 1000;
 const CACHE_KEY = 'appearance_settings_cache';
@@ -65,7 +79,8 @@ export function AppearanceProvider({ children }) {
             // Cek cache terlebih dahulu
             const cached = readCache();
             if (cached) {
-                setSettings(prev => ({ ...prev, ...cached }));
+                const normalizedCached = normalizeStorageUrls(cached);
+                setSettings(prev => ({ ...prev, ...normalizedCached }));
                 if (cached.accentColor) {
                     document.documentElement.style.setProperty('--color-accent', cached.accentColor);
                 }
@@ -75,7 +90,7 @@ export function AppearanceProvider({ children }) {
 
             // Cache miss — fetch dari API
             try {
-                const data = await settingsApi.getAppearance();
+                const data = normalizeStorageUrls(await settingsApi.getAppearance());
                 setSettings(prev => ({ ...prev, ...data }));
                 writeCache(data);
 
@@ -100,7 +115,7 @@ export function AppearanceProvider({ children }) {
         localStorage.removeItem(CACHE_KEY);
         setLoading(true);
         try {
-            const data = await settingsApi.getAppearance();
+            const data = normalizeStorageUrls(await settingsApi.getAppearance());
             setSettings(prev => ({ ...prev, ...data }));
             writeCache(data);
             if (data.accentColor) {

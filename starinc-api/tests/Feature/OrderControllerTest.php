@@ -185,11 +185,15 @@ class OrderControllerTest extends TestCase
 
     public function test_get_invoice(): void
     {
+        $user = User::factory()->create();
         $order = Order::factory()->create([
+            'user_id' => $user->id,
             'status' => 'pending_payment',
         ]);
+        $token = $user->createToken('auth-token')->plainTextToken;
 
-        $response = $this->getJson("/api/orders/{$order->order_number}/invoice");
+        $response = $this->withHeader('Authorization', "Bearer $token")
+                         ->getJson("/api/orders/{$order->order_number}/invoice");
 
         $response->assertStatus(200)
                  ->assertJsonStructure([

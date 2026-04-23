@@ -32,3 +32,14 @@ dist-ssr
 
 # Playwright auth profiles (contain session tokens)
 .playwright/profiles/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Binaries
+*.exe
+
+# Logs/Temp
+.playwright-cli/

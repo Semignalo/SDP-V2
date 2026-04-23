@@ -65,7 +65,8 @@ export default function ForgotPassword() {
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
-                                        className="pl-10 w-full rounded-xl border-neutral-300 bg-neutral-50 p-3 text-sm focus:ring-primary focus:border-primary border transition"
+                                        className="pl-10 w-full rounded-xl border-neutral-300 bg-neutral-50 p-3 text-base focus:ring-primary focus:border-primary border transition"
+                                        autoComplete="email"
                                         placeholder="kamu@email.com"
                                     />
                                 </div>

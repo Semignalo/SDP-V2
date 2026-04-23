@@ -14,9 +14,10 @@ export function AuthProvider({ children }) {
     const [userRole, setUserRole] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    async function signup(email, password, name, referralCode = null) {
+    async function signup(userData) {
         const data = await authApi.register({
-            name, email, password, password_confirmation: password, referral_code: referralCode
+            ...userData,
+            password_confirmation: userData.password,
         });
         localStorage.setItem('auth_token', data.token);
         

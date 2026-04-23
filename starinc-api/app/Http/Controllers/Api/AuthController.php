@@ -19,17 +19,22 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $validated = $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|string|email|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-            'phone'    => 'nullable|string|max:20',
+            'name'          => 'required|string|max:255',
+            'email'         => 'required|string|email|unique:users',
+            'password'      => 'required|string|min:8|confirmed',
+            'phone'         => 'nullable|string|max:20',
+            'address'       => 'nullable|string|max:500',
+            'city'          => 'nullable|string|max:100',
+            'postal_code'   => 'nullable|string|max:10',
             'referral_code' => 'nullable|string|exists:users,referral_code',
         ]);
 
-        $referrerId = null;
         if (!empty($validated['referral_code'])) {
             $referrer = User::where('referral_code', $validated['referral_code'])->first();
             $referrerId = $referrer?->id;
+        } else {
+            // Default: jadikan downline admin pertama yang ada
+            $referrerId = User::where('role', 'admin')->value('id');
         }
 
         $user = User::create([
@@ -37,6 +42,9 @@ class AuthController extends Controller
             'email'       => $validated['email'],
             'password'    => $validated['password'],
             'phone'       => $validated['phone'] ?? null,
+            'address'     => $validated['address'] ?? null,
+            'city'        => $validated['city'] ?? null,
+            'postal_code' => $validated['postal_code'] ?? null,
             'referrer_id' => $referrerId,
         ]);
 
@@ -69,6 +77,20 @@ class AuthController extends Controller
             'user'    => $this->userResponse($user),
             'token'   => $token,
         ], 201);
+    }
+
+    /**
+     * Look up referral code — returns owner name only (public, used on register form).
+     */
+    public function lookupReferral(string $code)
+    {
+        $user = User::where('referral_code', strtoupper($code))->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'Kode referral tidak ditemukan.'], 404);
+        }
+
+        return response()->json(['name' => $user->name]);
     }
 
     /**

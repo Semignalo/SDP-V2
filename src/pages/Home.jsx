@@ -34,6 +34,7 @@ export default function Home() {
                     loop
                     muted
                     playsInline
+                    preload="metadata"
                     className="absolute inset-0 w-full h-full object-cover"
                 >
                     {/* Placeholder Luxury Gold/Liquid Video */}
@@ -92,6 +93,7 @@ export default function Home() {
                                         loop
                                         muted
                                         playsInline
+                                        preload="metadata"
                                         className="w-full h-full object-cover pointer-events-none"
                                         src={settings?.goldSerumVideoUrl}
                                     />
@@ -137,6 +139,7 @@ export default function Home() {
                                         loop
                                         muted
                                         playsInline
+                                        preload="metadata"
                                         className="w-full h-full object-cover pointer-events-none"
                                         src={settings?.secondFeaturedVideoUrl}
                                     />

@@ -18,7 +18,8 @@
     "react-router-dom": "^7.13.0",
     "recharts": "^3.8.1",
     "sweetalert2": "^11.26.19",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

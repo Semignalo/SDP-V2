@@ -95,6 +95,35 @@ class AdminController extends Controller
     }
 
     /**
+     * Return all users (flat) with referrer_id for frontend tree building.
+     */
+    public function networkTree()
+    {
+        $users = User::select('id', 'name', 'email', 'role', 'referrer_id', 'referral_code')
+            ->with('tier:id,slug')
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn($u) => [
+                'id'            => $u->id,
+                'name'          => $u->name,
+                'email'         => $u->email,
+                'role'          => $u->role,
+                'referrer_id'   => $u->referrer_id,
+                'referral_code' => $u->referral_code,
+                'tier'          => $u->tier?->slug,
+            ]);
+
+        $counts = [
+            'total'      => $users->count(),
+            'admin'      => $users->where('role', 'admin')->count(),
+            'starcenter' => $users->where('role', 'starcenter')->count(),
+            'regular'    => $users->where('role', 'regular')->count(),
+        ];
+
+        return response()->json(['users' => $users->values(), 'counts' => $counts]);
+    }
+
+    /**
      * List all users (admin).
      */
     public function users(Request $request)
@@ -123,11 +152,7 @@ class AdminController extends Controller
             $q->orderBy('created_at', 'desc')->limit(20);
         }])->findOrFail($id);
 
-        // Get network info if starcenter
-        $network = null;
-        if ($user->role === 'starcenter') {
-            $network = $this->getUserNetwork($id);
-        }
+        $network = $this->getUserNetwork($id);
 
         return response()->json([
             'user' => $user,
@@ -140,28 +165,30 @@ class AdminController extends Controller
      */
     private function getUserNetwork($userId)
     {
-        $user = User::findOrFail($userId);
-
         // Get uplines (ancestors)
         $uplines = DB::table('starcenter_network')
             ->where('downline_id', $userId)
             ->where('depth', '>', 0)
             ->join('users', 'starcenter_network.upline_id', '=', 'users.id')
-            ->select('users.id', 'users.name', 'users.email', 'starcenter_network.depth')
+            ->select('users.id', 'users.name', 'users.email', 'users.role', 'starcenter_network.depth')
             ->orderBy('starcenter_network.depth')
             ->get();
 
-        // Get downlines (descendants)
+        // Get downlines — include referrer_id and role so frontend can build the tree
         $downlines = DB::table('starcenter_network')
-            ->where('upline_id', $userId)
+            ->where('starcenter_network.upline_id', $userId)
             ->join('users', 'starcenter_network.downline_id', '=', 'users.id')
-            ->select('users.id', 'users.name', 'users.email', 'starcenter_network.depth')
+            ->select(
+                'users.id', 'users.name', 'users.email', 'users.role',
+                'users.referrer_id', 'users.referral_code',
+                'starcenter_network.depth'
+            )
             ->orderBy('starcenter_network.depth')
             ->get();
 
         return [
-            'uplines' => $uplines,
-            'downlines' => $downlines,
+            'uplines'         => $uplines,
+            'downlines'       => $downlines,
             'total_downlines' => $downlines->count(),
         ];
     }
