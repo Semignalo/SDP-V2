@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { settingsApi } from '../api/settingsApi';
 
 const AppearanceContext = createContext();
@@ -27,7 +27,12 @@ const DEFAULT_SETTINGS = {
     heroTitle: 'True Radiance',
     heroSubtitle: 'Discover the new Gold Standard for your skin.',
     logoUrl: '/logo.png',
-    accentColor: '#C5A059'
+    accentColor: '#C5A059',
+    editorialTag: 'Our Signature Collection',
+    editorialTitle: 'Crafted for Your Skin',
+    editorialDescription: 'Formulated with the finest ingredients, our products are designed to nourish and revitalize your skin with every use.',
+    editorialCtaText: 'Browse Collection',
+    editorialImageUrl: ''
 };
 
 /**
@@ -111,7 +116,7 @@ export function AppearanceProvider({ children }) {
      * Memaksa refresh appearance (invalidate cache lalu fetch ulang).
      * Bisa dipanggil setelah admin mengubah appearance.
      */
-    const refreshAppearance = async () => {
+    const refreshAppearance = useCallback(async () => {
         localStorage.removeItem(CACHE_KEY);
         setLoading(true);
         try {
@@ -126,10 +131,15 @@ export function AppearanceProvider({ children }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    const value = useMemo(
+        () => ({ settings, loading, refreshAppearance }),
+        [settings, loading, refreshAppearance]
+    );
 
     return (
-        <AppearanceContext.Provider value={{ settings, loading, refreshAppearance }}>
+        <AppearanceContext.Provider value={value}>
             {children}
         </AppearanceContext.Provider>
     );

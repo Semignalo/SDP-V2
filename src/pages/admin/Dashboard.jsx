@@ -226,7 +226,6 @@ export default function AdminDashboard() {
     );
 }
 
-// eslint-disable-next-line no-unused-vars
 function StatCard({ title, value, subtext, trend, icon: Icon, color }) {
     return (
         <div className="bg-white p-6 rounded-xl shadow-sm flex items-start justify-between">

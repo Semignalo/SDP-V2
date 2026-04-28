@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 
 const CartContext = createContext();
 const CART_STORAGE_KEY = 'shopping-cart';
@@ -102,10 +102,10 @@ export function CartProvider({ children }) {
         return cart.reduce((count, item) => count + item.quantity, 0);
     }, [cart]);
 
-    const openCart = () => setIsCartOpen(true);
-    const closeCart = () => setIsCartOpen(false);
+    const openCart  = useCallback(() => setIsCartOpen(true),  []);
+    const closeCart = useCallback(() => setIsCartOpen(false), []);
 
-    const value = {
+    const value = useMemo(() => ({
         cart,
         isCartOpen,
         addToCart,
@@ -116,7 +116,8 @@ export function CartProvider({ children }) {
         getCartCount,
         openCart,
         closeCart
-    };
+    }), [cart, isCartOpen, addToCart, removeFromCart, updateQuantity,
+        clearCart, getCartTotal, getCartCount, openCart, closeCart]);
 
     return (
         <CartContext.Provider value={value}>

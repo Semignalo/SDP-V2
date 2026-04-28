@@ -5,6 +5,7 @@ import { cn } from '../lib/utils';
 import { useAppearance } from '../contexts/AppearanceContext';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import Swal from 'sweetalert2';
 
 export default function Navbar() {
@@ -12,6 +13,7 @@ export default function Navbar() {
     const { settings } = useAppearance();
     const { openCart, getCartCount } = useCart();
     const { currentUser, userRole, logout } = useAuth();
+    const { lang, setLang } = useLanguage();
     const navigate = useNavigate();
 
     const handleLogout = async () => {
@@ -56,8 +58,26 @@ export default function Navbar() {
                             </Link>
                         </div>
 
-                        {/* Right: User & Cart */}
+                        {/* Right: Lang toggle + User + Cart */}
                         <div className="flex items-center gap-1 sm:gap-2">
+                            {/* Language Toggle */}
+                            <div className="hidden sm:flex items-center border border-gray-200 rounded-full overflow-hidden text-[11px] font-semibold tracking-wider">
+                                <button
+                                    onClick={() => setLang('en')}
+                                    className={cn(
+                                        'px-2.5 py-1 transition-colors',
+                                        lang === 'en' ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-700'
+                                    )}
+                                >EN</button>
+                                <button
+                                    onClick={() => setLang('id')}
+                                    className={cn(
+                                        'px-2.5 py-1 transition-colors',
+                                        lang === 'id' ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-700'
+                                    )}
+                                >ID</button>
+                            </div>
+
                             {currentUser ? (
                                 <div className="group relative">
                                     <button className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-50 rounded-full transition-colors gap-2">
@@ -156,7 +176,16 @@ export default function Navbar() {
                         ))}
                     </ul>
                 </div>
-                <div className="p-6 border-t border-gray-100 bg-gray-50">
+                {/* Language toggle – mobile sidebar */}
+                <div className="px-6 py-4 border-t border-gray-100 flex items-center gap-3">
+                    <span className="text-xs text-gray-400 uppercase tracking-widest">Language</span>
+                    <div className="flex items-center border border-gray-200 rounded-full overflow-hidden text-[11px] font-semibold">
+                        <button onClick={() => setLang('en')} className={cn('px-3 py-1 transition-colors', lang === 'en' ? 'bg-gray-900 text-white' : 'text-gray-400')}>EN</button>
+                        <button onClick={() => setLang('id')} className={cn('px-3 py-1 transition-colors', lang === 'id' ? 'bg-gray-900 text-white' : 'text-gray-400')}>ID</button>
+                    </div>
+                </div>
+
+                <div className="px-6 pb-6 bg-gray-50">
                     {currentUser ? (
                         <button
                             onClick={() => { setIsOpen(false); handleLogout(); }}

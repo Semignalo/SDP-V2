@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { authApi } from '../api/authApi';
 
 const AuthContext = createContext();
@@ -14,32 +14,28 @@ export function AuthProvider({ children }) {
     const [userRole, setUserRole] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    async function signup(userData) {
+    const signup = useCallback(async (userData) => {
         const data = await authApi.register({
             ...userData,
             password_confirmation: userData.password,
         });
         localStorage.setItem('auth_token', data.token);
-        
         setCurrentUser(data.user);
         setUserData(data.user);
         setUserRole(data.user.role || 'regular');
-        
         return data.user;
-    }
+    }, []);
 
-    async function login(email, password) {
+    const login = useCallback(async (email, password) => {
         const data = await authApi.login(email, password);
         localStorage.setItem('auth_token', data.token);
-        
         setCurrentUser(data.user);
         setUserData(data.user);
         setUserRole(data.user.role || 'regular');
-        
         return data.user;
-    }
+    }, []);
 
-    async function logout() {
+    const logout = useCallback(async () => {
         try {
             await authApi.logout();
         } catch (e) {
@@ -50,21 +46,21 @@ export function AuthProvider({ children }) {
             setUserData(null);
             setUserRole(null);
         }
-    }
+    }, []);
 
-    async function updateProfile(data) {
+    const updateProfile = useCallback(async (data) => {
         const response = await authApi.updateProfile(data);
         setUserData(response.user);
         setCurrentUser(response.user);
-    }
+    }, []);
 
-    async function updatePasswordAction(currentPassword, newPassword) {
+    const updatePasswordAction = useCallback(async (currentPassword, newPassword) => {
         await authApi.updatePassword({
             current_password: currentPassword,
             password: newPassword,
             password_confirmation: newPassword
         });
-    }
+    }, []);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -112,7 +108,7 @@ export function AuthProvider({ children }) {
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, []);
 
-    const value = {
+    const value = useMemo(() => ({
         currentUser,
         userData,
         userRole,
@@ -121,7 +117,7 @@ export function AuthProvider({ children }) {
         logout,
         updateProfile,
         updatePassword: updatePasswordAction
-    };
+    }), [currentUser, userData, userRole, signup, login, logout, updateProfile, updatePasswordAction]);
 
     return (
         <AuthContext.Provider value={value}>

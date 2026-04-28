@@ -18,7 +18,12 @@ const DEFAULT_CONFIG = {
     secondFeaturedVideoUrl: '',
     secondFeaturedSubtitle: 'Our Concept',
     secondFeaturedDescription1: 'A focus on healthy, radiant skin.',
-    secondFeaturedDescription2: 'Crafted with passion.'
+    secondFeaturedDescription2: 'Crafted with passion.',
+    editorialTag: 'Our Signature Collection',
+    editorialTitle: 'Crafted for Your Skin',
+    editorialDescription: 'Formulated with the finest ingredients, our products are designed to nourish and revitalize your skin with every use.',
+    editorialCtaText: 'Browse Collection',
+    editorialImageUrl: ''
 };
 
 /**
@@ -95,6 +100,82 @@ function VideoUploadField({ label, fieldName, value, onChange, hint }) {
             {value && (
                 <div className="mt-4 max-w-[150px] aspect-[3/4] bg-black rounded-lg overflow-hidden relative">
                     <video src={value} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                </div>
+            )}
+        </div>
+    );
+}
+
+function ImageUploadField({ label, fieldName, value, onChange, hint }) {
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+
+    const handleUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        try {
+            const result = await adminSettingsApi.uploadFile(
+                file,
+                'appearance',
+                (percent) => setUploadProgress(percent)
+            );
+            onChange(fieldName, result.url);
+        } catch (error) {
+            console.error('Upload gagal:', error);
+            Swal.fire({
+                title: 'Upload Gagal!',
+                text: error?.response?.data?.message || error.message || 'Terjadi kesalahan saat upload.',
+                icon: 'error',
+                confirmButtonColor: '#111827'
+            });
+        } finally {
+            setIsUploading(false);
+            setUploadProgress(0);
+        }
+    };
+
+    return (
+        <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 block">{label}</label>
+            {hint && <p className="text-xs text-gray-500">{hint}</p>}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                <input
+                    name={fieldName}
+                    value={value || ''}
+                    onChange={(e) => onChange(fieldName, e.target.value)}
+                    className="flex-1 min-w-0 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-mono text-xs"
+                    placeholder="Paste image URL atau upload di bawah"
+                />
+                <label className="cursor-pointer bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 shrink-0">
+                    <Upload size={16} /> Upload Gambar
+                    <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/jpg"
+                        onChange={handleUpload}
+                        className="hidden"
+                        disabled={isUploading}
+                    />
+                </label>
+            </div>
+            {isUploading && (
+                <div className="mt-2 flex items-center gap-2">
+                    <Loader2 className="animate-spin text-blue-600" size={14} />
+                    <div className="h-1.5 flex-1 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                            className="h-full bg-blue-600 transition-all duration-300"
+                            style={{ width: `${uploadProgress}%` }}
+                        />
+                    </div>
+                    <span className="text-xs text-gray-500">{uploadProgress}%</span>
+                </div>
+            )}
+            {value && (
+                <div className="mt-4 max-w-[280px] aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                    <img src={value} alt="Preview" className="w-full h-full object-cover" />
                 </div>
             )}
         </div>
@@ -271,21 +352,20 @@ export default function AdminAppearance() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-3">
                                 <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                                    <Image size={14} /> Logo Image URL
+                                    <Image size={14} /> Logo
                                 </label>
-                                <input
-                                    name="logoUrl"
+                                <ImageUploadField
+                                    label=""
+                                    fieldName="logoUrl"
                                     value={config.logoUrl}
-                                    onChange={handleChange}
-                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-mono text-xs"
+                                    onChange={handleFieldChange}
+                                    hint="Gunakan file PNG dengan background transparan untuk hasil terbaik."
                                 />
-                                <div className="p-4 bg-gray-100/50 border border-dashed border-gray-300 rounded-lg flex justify-center h-24 items-center">
-                                    {config.logoUrl ? (
+                                {config.logoUrl && (
+                                    <div className="p-4 bg-gray-100/50 border border-dashed border-gray-300 rounded-lg flex justify-center h-24 items-center">
                                         <img src={config.logoUrl} alt="Preview" className="h-12 w-auto object-contain" />
-                                    ) : (
-                                        <span className="text-xs text-gray-400">No logo preview</span>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="space-y-3">
@@ -397,6 +477,67 @@ export default function AdminAppearance() {
                                 value={config.secondFeaturedVideoUrl}
                                 onChange={handleFieldChange}
                                 hint="Gunakan format video terkompres dengan framerate 30fps dan resolusi maksimal 1080p (vertikal 4:3)."
+                            />
+                        </div>
+                    </div>
+
+                    {/* Editorial Image & Text Section */}
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 className="text-lg font-bold text-gray-800 mb-1 flex items-center gap-2">
+                            <Image size={20} className="text-gray-400" />
+                            Editorial Image & Text Section
+                        </h3>
+                        <p className="text-xs text-gray-400 mb-6">Section di bawah produk — teks kiri, gambar full-bleed di kanan.</p>
+
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-700">Tag Kecil (atas judul)</label>
+                                    <input
+                                        name="editorialTag"
+                                        value={config.editorialTag || ''}
+                                        onChange={handleChange}
+                                        placeholder="Contoh: Our Signature Collection"
+                                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-700">Teks Tombol CTA</label>
+                                    <input
+                                        name="editorialCtaText"
+                                        value={config.editorialCtaText || ''}
+                                        onChange={handleChange}
+                                        placeholder="Contoh: Browse Collection"
+                                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">Judul Utama</label>
+                                <input
+                                    name="editorialTitle"
+                                    value={config.editorialTitle || ''}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: Crafted for Your Skin"
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">Deskripsi</label>
+                                <textarea
+                                    name="editorialDescription"
+                                    value={config.editorialDescription || ''}
+                                    onChange={handleChange}
+                                    rows="3"
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none"
+                                />
+                            </div>
+                            <ImageUploadField
+                                label="Gambar (JPG/PNG/WebP)"
+                                fieldName="editorialImageUrl"
+                                value={config.editorialImageUrl}
+                                onChange={handleFieldChange}
+                                hint="Gambar akan ditampilkan full-bleed di sisi kanan section. Gunakan gambar landscape berkualitas tinggi."
                             />
                         </div>
                     </div>
