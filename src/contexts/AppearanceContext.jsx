@@ -11,7 +11,13 @@ function normalizeStorageUrls(data) {
     return Object.fromEntries(
         Object.entries(data).map(([key, val]) => {
             if (typeof val === 'string' && /\/storage\//.test(val)) {
-                val = val.replace(/^https?:\/\/[^/]+/, STORAGE_BASE);
+                if (/^https?:\/\//.test(val)) {
+                    // Absolute URL: replace hostname with current STORAGE_BASE
+                    val = val.replace(/^https?:\/\/[^/]+/, STORAGE_BASE);
+                } else if (val.startsWith('/storage/')) {
+                    // Relative URL: prepend STORAGE_BASE
+                    val = STORAGE_BASE + val;
+                }
             }
             return [key, val];
         })

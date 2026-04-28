@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { adminSettingsApi } from '../../api/settingsApi';
+import { useAppearance } from '../../contexts/AppearanceContext';
 import { Save, Image, Type, Palette, Video, Upload, Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
+
+// Normalize upload URL to always use the current dev/prod host
+const STORAGE_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace(/\/api\/?$/, '');
+function toAbsoluteUrl(url) {
+    if (!url) return url;
+    if (/^https?:\/\//.test(url)) return STORAGE_BASE + url.replace(/^https?:\/\/[^/]+/, '');
+    if (url.startsWith('/storage/')) return STORAGE_BASE + url;
+    return url;
+}
 
 const DEFAULT_CONFIG = {
     heroVideoUrl: 'https://cdn.pixabay.com/video/2023/10/22/186175-877661556_large.mp4',
@@ -183,6 +193,7 @@ function ImageUploadField({ label, fieldName, value, onChange, hint }) {
 }
 
 export default function AdminAppearance() {
+    const { refreshAppearance } = useAppearance();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState(null);
@@ -211,9 +222,10 @@ export default function AdminAppearance() {
         setConfig(prev => ({ ...prev, [name]: value }));
     };
 
-    // Handler khusus untuk field yang diupdate dari komponen anak (VideoUploadField)
+    // Handler khusus untuk field yang diupdate dari komponen anak (VideoUploadField / ImageUploadField)
+    // Normalizes storage URLs so preview images load correctly regardless of APP_URL setting
     const handleFieldChange = (fieldName, value) => {
-        setConfig(prev => ({ ...prev, [fieldName]: value }));
+        setConfig(prev => ({ ...prev, [fieldName]: toAbsoluteUrl(value) }));
     };
 
     const handleSave = async (e) => {
@@ -221,7 +233,9 @@ export default function AdminAppearance() {
         setSaving(true);
         try {
             await adminSettingsApi.updateAppearance(config);
-            localStorage.removeItem('appearance_settings_cache');
+            // Invalidate cache and push new settings into AppearanceContext immediately
+            // so changes (logo, colors, etc.) are visible without a hard page reload
+            await refreshAppearance();
             setLastSaved(new Date());
             Swal.fire({
                 title: 'Berhasil!',
