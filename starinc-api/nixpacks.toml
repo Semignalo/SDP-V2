@@ -1,3 +1,7 @@
+[variables]
+APP_URL = "http://localhost"
+APP_KEY = "base64:placeholder000000000000000000000000000000000="
+
 [phases.setup]
 nixPkgs = [
   "php83",
