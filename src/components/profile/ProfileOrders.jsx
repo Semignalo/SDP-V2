@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { orderApi } from '../../api/orderApi';
-import { Package, ExternalLink, Printer, Upload, CheckCircle, Clock, Truck, XCircle, AlertCircle } from 'lucide-react';
+import { Package, ExternalLink, Printer, Upload, CheckCircle, Clock, Truck, XCircle, AlertCircle, Ban } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { getErrorMessage } from '../../api/client';
@@ -77,6 +77,7 @@ export default function ProfileOrders() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [uploadingId, setUploadingId] = useState(null);
+    const [cancellingId, setCancellingId] = useState(null);
     const prevStatusesRef = React.useRef({});
 
     const fetchMyOrders = React.useCallback(async (silent = false) => {
@@ -128,6 +129,31 @@ export default function ProfileOrders() {
         const interval = setInterval(() => fetchMyOrders(true), 30000);
         return () => clearInterval(interval);
     }, [fetchMyOrders]);
+
+    const handleCancelOrder = async (order) => {
+        const result = await Swal.fire({
+            title: 'Batalkan Pesanan?',
+            text: `Pesanan #${order.order_number} akan dibatalkan. Tindakan ini tidak dapat diurungkan.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Ya, Batalkan',
+            cancelButtonText: 'Kembali',
+        });
+        if (!result.isConfirmed) return;
+
+        setCancellingId(order.id);
+        try {
+            await orderApi.cancelOrder(order.order_number);
+            setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'rejected' } : o));
+            Swal.fire({ icon: 'success', title: 'Dibatalkan', text: 'Pesanan berhasil dibatalkan.', timer: 2000, showConfirmButton: false });
+        } catch (err) {
+            Swal.fire('Gagal', getErrorMessage(err, 'Gagal membatalkan pesanan.'), 'error');
+        } finally {
+            setCancellingId(null);
+        }
+    };
 
     const handleUploadProof = async (orderId, file) => {
         if (!file) return;
@@ -294,6 +320,20 @@ export default function ProfileOrders() {
                                                 className="text-xs font-bold flex justify-center items-center gap-1.5 w-full bg-gray-900 text-white border border-gray-900 py-2 rounded-lg hover:bg-gray-800 transition"
                                             >
                                                 <Printer size={13} /> Cetak / Download
+                                            </button>
+                                        )}
+
+                                        {/* Batalkan Pesanan — only for pending_payment */}
+                                        {order.status === 'pending_payment' && (
+                                            <button
+                                                onClick={() => handleCancelOrder(order)}
+                                                disabled={cancellingId === order.id}
+                                                className="text-xs font-bold flex justify-center items-center gap-1.5 w-full border border-red-200 text-red-600 py-2 rounded-lg hover:bg-red-50 transition disabled:opacity-60"
+                                            >
+                                                {cancellingId === order.id
+                                                    ? <><span className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-500" /> Membatalkan...</>
+                                                    : <><Ban size={13} /> Batalkan Pesanan</>
+                                                }
                                             </button>
                                         )}
                                     </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { adminSettingsApi } from '../../api/settingsApi';
 import { useAppearance } from '../../contexts/AppearanceContext';
 import { Save, Image, Type, Palette, Video, Upload, Loader2 } from 'lucide-react';
@@ -193,29 +193,34 @@ function ImageUploadField({ label, fieldName, value, onChange, hint }) {
 }
 
 export default function AdminAppearance() {
-    const { refreshAppearance } = useAppearance();
+    const { settings, loading: contextLoading, refreshAppearance } = useAppearance();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState(null);
     const [config, setConfig] = useState(DEFAULT_CONFIG);
+    const adminFetched = useRef(false);
 
+    // Primary: fetch fresh data from admin API (direct from DB)
     useEffect(() => {
-        const fetchAppearance = async () => {
-            try {
-                const data = await adminSettingsApi.getAppearance();
-                if (data && typeof data === 'object') {
+        adminSettingsApi.getAppearance()
+            .then(data => {
+                if (data && typeof data === 'object' && Object.keys(data).length > 0) {
                     setConfig(prev => ({ ...prev, ...data }));
+                    adminFetched.current = true;
                 }
-            } catch (error) {
-                console.error('Error fetching appearance settings:', error);
-                // Gunakan default config jika fetch gagal
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchAppearance();
+            })
+            .catch(err => console.error('Error fetching appearance settings:', err))
+            .finally(() => setLoading(false));
     }, []);
+
+    // Fallback: jika admin API belum/gagal merespons, pakai data dari AppearanceContext
+    // (AppearanceContext punya localStorage cache → data live tetap tampil)
+    useEffect(() => {
+        if (!contextLoading && !adminFetched.current) {
+            setConfig(prev => ({ ...prev, ...settings }));
+            setLoading(false);
+        }
+    }, [contextLoading, settings]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -557,19 +562,94 @@ export default function AdminAppearance() {
                     </div>
                 </div>
 
-                {/* Kolom Kanan: Info */}
-                <div className="space-y-6">
-                    <div className="bg-blue-50 border border-blue-100 p-6 rounded-xl">
-                        <h4 className="text-blue-800 font-bold mb-2">Live Preview</h4>
-                        <p className="text-sm text-blue-600 mb-4 leading-relaxed">
-                            Setiap perubahan yang Anda simpan akan langsung aktif di halaman utama website.
-                        </p>
-                        <div className="text-xs bg-white/50 p-3 rounded text-blue-800 font-mono">
-                            {lastSaved
-                                ? `Last saved: ${lastSaved.toLocaleTimeString('id-ID')}`
-                                : 'Belum ada perubahan disimpan'}
+                {/* Kolom Kanan: Live Preview */}
+                <div className="space-y-4 lg:sticky lg:top-6">
+
+                    <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
+                        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                            <span className="text-sm font-semibold text-gray-700">Live Preview</span>
+                            <span className="text-[10px] text-gray-400 font-mono">
+                                {lastSaved ? `Saved ${lastSaved.toLocaleTimeString('id-ID')}` : 'Belum disimpan'}
+                            </span>
+                        </div>
+
+                        {/* Mini Hero */}
+                        <div className="relative aspect-video bg-gray-900 overflow-hidden">
+                            {config.heroVideoUrl ? (
+                                <video
+                                    key={config.heroVideoUrl}
+                                    src={config.heroVideoUrl}
+                                    className="absolute inset-0 w-full h-full object-cover opacity-60"
+                                    autoPlay muted loop playsInline
+                                />
+                            ) : (
+                                <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900" />
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                            <div className="absolute inset-0 flex flex-col items-center justify-end pb-5 px-4 text-center">
+                                <h3 className="text-white font-serif text-base leading-tight drop-shadow">
+                                    {config.heroTitle || <span className="opacity-40 italic">Hero Title</span>}
+                                </h3>
+                                <p className="text-white/60 text-[11px] mt-1.5 max-w-[220px] leading-relaxed">
+                                    {config.heroSubtitle || ''}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Branding bar */}
+                        <div className="px-4 py-3 flex items-center gap-3 border-b border-gray-100 bg-white">
+                            {config.logoUrl ? (
+                                <img src={config.logoUrl} alt="Logo" className="h-7 w-auto object-contain max-w-[80px]" />
+                            ) : (
+                                <span className="text-xs text-gray-400 italic">Logo</span>
+                            )}
+                            <div className="ml-auto flex items-center gap-2">
+                                <div
+                                    className="w-4 h-4 rounded-full border border-gray-200 shadow-inner"
+                                    style={{ backgroundColor: config.accentColor || '#C5A059' }}
+                                />
+                                <span className="text-[11px] text-gray-400 font-mono">{config.accentColor || '#C5A059'}</span>
+                            </div>
+                        </div>
+
+                        {/* Featured section preview */}
+                        {(config.goldSerumSubtitle || config.goldSerumDescription1) && (
+                            <div className="px-4 py-3 border-b border-gray-100 bg-[#faf8f5]">
+                                <p className="text-[10px] uppercase tracking-widest text-gray-400 mb-1">Featured Section #1</p>
+                                <p className="text-sm font-serif text-gray-800 mb-1" style={{ color: config.accentColor || '#C5A059' }}>
+                                    {config.goldSerumSubtitle}
+                                </p>
+                                <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">
+                                    {config.goldSerumDescription1}
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Editorial section preview */}
+                        {(config.editorialTitle || config.editorialTag) && (
+                            <div className="px-4 py-3 border-b border-gray-100 bg-stone-50">
+                                {config.editorialTag && (
+                                    <p className="text-[10px] uppercase tracking-widest text-gray-400 mb-1">{config.editorialTag}</p>
+                                )}
+                                <p className="text-sm font-serif text-gray-900 mb-1">{config.editorialTitle}</p>
+                                <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{config.editorialDescription}</p>
+                                {config.editorialImageUrl && (
+                                    <img
+                                        src={config.editorialImageUrl}
+                                        alt=""
+                                        className="mt-2 w-full h-20 object-cover rounded"
+                                    />
+                                )}
+                            </div>
+                        )}
+
+                        <div className="px-4 py-2.5 bg-blue-50">
+                            <p className="text-[11px] text-blue-600 leading-relaxed">
+                                Preview memperbarui otomatis saat form diubah. Klik <strong>Simpan</strong> agar aktif di website.
+                            </p>
                         </div>
                     </div>
+
                 </div>
 
             </div>

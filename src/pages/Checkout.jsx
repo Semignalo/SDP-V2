@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { orderApi } from '../api/orderApi';
+import { shippingApi } from '../api/shippingApi';
 import { settingsApi } from '../api/settingsApi';
 import { TIER_CONFIG } from '../lib/tierUtils';
 import { getErrorMessage } from '../api/client';
-import { CheckCircle2, MapPin, ShoppingBag, CreditCard } from 'lucide-react';
+import { CheckCircle2, MapPin, ShoppingBag, CreditCard, Truck, Clock, ChevronDown } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 // Progress Stepper Component
@@ -53,6 +54,8 @@ function CheckoutStepper({ currentStep }) {
     );
 }
 
+const COURIER_LABELS = { jne: 'JNE', pos: 'POS Indonesia', tiki: 'TIKI' };
+
 export default function Checkout() {
     const { cart, getCartTotal, clearCart } = useCart();
     const { userData } = useAuth();
@@ -62,30 +65,56 @@ export default function Checkout() {
     if (!userData) return <Navigate to="/login" state={{ from: location }} replace />;
 
     const [loading, setLoading] = useState(false);
-    const [moqThreshold, setMoqThreshold] = useState(5000000); // Default fallback
+    const [moqThreshold, setMoqThreshold] = useState(5000000);
+    const snapReady = useRef(false);
+
+    // RajaOngkir state
+    const [provinces, setProvinces] = useState([]);
+    const [cities, setCities] = useState([]);
+    const [shippingOptions, setShippingOptions] = useState([]);
+    const [selectedShipping, setSelectedShipping] = useState(null);
+    const [selectedProvinceId, setSelectedProvinceId] = useState('');
+    const [selectedCityId, setSelectedCityId] = useState('');
+    const [selectedCityName, setSelectedCityName] = useState('');
+    const [loadingCities, setLoadingCities] = useState(false);
+    const [loadingShipping, setLoadingShipping] = useState(false);
+    const [rajaOngkirEnabled, setRajaOngkirEnabled] = useState(false);
+
+    // Load Midtrans Snap script once on mount
+    useEffect(() => {
+        const isProduction = import.meta.env.VITE_MIDTRANS_IS_PRODUCTION === 'true';
+        const snapUrl = isProduction
+            ? 'https://app.midtrans.com/snap/snap.js'
+            : 'https://app.sandbox.midtrans.com/snap/snap.js';
+
+        const existing = document.getElementById('midtrans-snap-script');
+        if (existing) { snapReady.current = true; return; }
+
+        const script = document.createElement('script');
+        script.id = 'midtrans-snap-script';
+        script.src = snapUrl;
+        script.setAttribute('data-client-key', import.meta.env.VITE_MIDTRANS_CLIENT_KEY || '');
+        script.onload = () => { snapReady.current = true; };
+        document.body.appendChild(script);
+    }, []);
+
     const [formData, setFormData] = useState({
         name: '',
         phone: '',
         address: '',
-        city: '',
         postalCode: ''
     });
 
-    // Fetch MOQ threshold from server
+    // Fetch MOQ threshold
     useEffect(() => {
         if (userData?.role === 'starcenter') {
             settingsApi.getSystemSettings()
-                .then((data) => {
-                    setMoqThreshold(data.moq_threshold ?? 5000000);
-                })
-                .catch((error) => {
-                    console.error('Failed to fetch MOQ threshold:', error);
-                    // Use default fallback
-                });
+                .then((data) => setMoqThreshold(data.moq_threshold ?? 5000000))
+                .catch(() => {});
         }
     }, [userData]);
 
-    // Initialize form with UserData if logged in
+    // Initialize form with userData
     useEffect(() => {
         if (userData) {
             setFormData(prev => ({
@@ -93,22 +122,81 @@ export default function Checkout() {
                 name: userData.name || prev.name,
                 phone: userData.phone || prev.phone,
                 address: userData.address || prev.address,
-                city: userData.city || prev.city,
                 postalCode: userData.postal_code || prev.postalCode
             }));
         }
     }, [userData]);
 
+    // Load provinces on mount, detect if RajaOngkir is enabled
+    useEffect(() => {
+        shippingApi.getProvinces()
+            .then(data => {
+                if (Array.isArray(data) && data.length > 0) {
+                    setProvinces(data);
+                    setRajaOngkirEnabled(true);
+                }
+            })
+            .catch(() => {
+                // RajaOngkir not configured — fall back to flat rate mode
+                setRajaOngkirEnabled(false);
+            });
+    }, []);
+
+    const handleProvinceChange = async (e) => {
+        const provinceId = e.target.value;
+        setSelectedProvinceId(provinceId);
+        setSelectedCityId('');
+        setSelectedCityName('');
+        setCities([]);
+        setShippingOptions([]);
+        setSelectedShipping(null);
+
+        if (!provinceId) return;
+
+        setLoadingCities(true);
+        try {
+            const data = await shippingApi.getCities(provinceId);
+            setCities(Array.isArray(data) ? data : []);
+        } catch {
+            setCities([]);
+        } finally {
+            setLoadingCities(false);
+        }
+    };
+
+    const handleCityChange = async (e) => {
+        const cityId = e.target.value;
+        const cityObj = cities.find(c => String(c.city_id) === String(cityId));
+        setSelectedCityId(cityId);
+        setSelectedCityName(cityObj ? `${cityObj.type} ${cityObj.city_name}` : '');
+        setShippingOptions([]);
+        setSelectedShipping(null);
+
+        if (!cityId) return;
+
+        setLoadingShipping(true);
+        try {
+            const items = cart.map(item => ({ product_id: item.id, quantity: item.quantity }));
+            const data = await shippingApi.getCost(cityId, items);
+            setShippingOptions(Array.isArray(data) ? data : []);
+        } catch {
+            setShippingOptions([]);
+        } finally {
+            setLoadingShipping(false);
+        }
+    };
+
     const subtotal = getCartTotal();
     const isStarcenter = userData?.role === 'starcenter';
     const moqMet = !isStarcenter || subtotal >= moqThreshold;
 
-    // Tier Discount Logic (just for frontend display, backend recalculates)
     const discountPercentage = userData?.tier?.discount_percent || 0;
     const discountAmount = (subtotal * discountPercentage) / 100;
-    
-    const shipping = 20000;
-    const total = subtotal - discountAmount + shipping;
+
+    const shippingCost = selectedShipping ? selectedShipping.cost : (rajaOngkirEnabled ? null : 20000);
+    const total = shippingCost !== null ? subtotal - discountAmount + shippingCost : subtotal - discountAmount;
+
+    const canSubmit = !loading && moqMet && (!rajaOngkirEnabled || selectedShipping !== null);
 
     if (cart.length === 0) {
         return (
@@ -132,11 +220,20 @@ export default function Checkout() {
     const handleCheckout = async (e) => {
         e.preventDefault();
 
-        // Starcenter Batch check (frontend validation, backend also validates)
-        if (userData?.role === 'starcenter' && total < moqThreshold) {
+        if (userData?.role === 'starcenter' && subtotal < moqThreshold) {
             Swal.fire({
                 title: 'Minimum Belanja Belum Tercapai',
                 text: `Sebagai akun Starcenter (Official Distributor), minimum transaksi adalah Rp ${moqThreshold.toLocaleString('id-ID')}.`,
+                icon: 'warning',
+                confirmButtonColor: '#111827'
+            });
+            return;
+        }
+
+        if (rajaOngkirEnabled && !selectedShipping) {
+            Swal.fire({
+                title: 'Pilih Metode Pengiriman',
+                text: 'Silakan pilih provinsi, kota, dan metode pengiriman terlebih dahulu.',
                 icon: 'warning',
                 confirmButtonColor: '#111827'
             });
@@ -152,40 +249,58 @@ export default function Checkout() {
                 quantity: item.quantity
             }));
 
-            const response = await orderApi.checkout({
+            const payload = {
                 customer_info: {
                     name: formData.name,
                     phone: formData.phone,
                     address: formData.address,
-                    city: formData.city,
-                    postal_code: formData.postalCode
+                    city: selectedCityName || formData.city || '',
+                    postal_code: formData.postalCode,
+                    ...(rajaOngkirEnabled && selectedCityId ? { destination_city_id: parseInt(selectedCityId) } : {}),
                 },
-                items: itemsData
-            });
+                items: itemsData,
+                ...(rajaOngkirEnabled && selectedShipping ? {
+                    shipping_courier: selectedShipping.courier,
+                    shipping_service: selectedShipping.service,
+                    shipping_cost: selectedShipping.cost,
+                    destination_city_id: parseInt(selectedCityId),
+                } : {}),
+            };
+
+            const response = await orderApi.checkout(payload);
+
+            const { snap_token, order_number } = response.data;
 
             clearCart();
+            setLoading(false);
 
-            Swal.fire({
-                title: 'Pesanan Dibuat!',
-                text: 'Silakan lanjutkan ke halaman pembayaran.',
-                icon: 'success',
-                confirmButtonColor: '#111827',
-                timer: 2000,
-                showConfirmButton: false
-            }).then(() => {
-                navigate(`/invoice/${response.data.order_number}`);
-            });
+            if (snap_token && window.snap) {
+                window.snap.pay(snap_token, {
+                    onSuccess: () => navigate(`/invoice/${order_number}?paid=1`),
+                    onPending: () => navigate(`/invoice/${order_number}`),
+                    onError: () => {
+                        Swal.fire({
+                            title: 'Pembayaran Gagal',
+                            text: 'Terjadi kesalahan saat memproses pembayaran. Pesanan kamu masih tersimpan.',
+                            icon: 'error',
+                            confirmButtonColor: '#111827',
+                        }).then(() => navigate(`/invoice/${order_number}`));
+                    },
+                    onClose: () => navigate(`/invoice/${order_number}`),
+                });
+            } else {
+                navigate(`/invoice/${order_number}`);
+            }
 
         } catch (error) {
             console.error('Error creating order:', error);
+            setLoading(false);
             Swal.fire({
                 title: 'Gagal!',
                 text: getErrorMessage(error, 'Terjadi kesalahan saat membuat pesanan.'),
                 icon: 'error',
                 confirmButtonColor: '#111827'
             });
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -197,7 +312,7 @@ export default function Checkout() {
 
                 {/* Left Form */}
                 <div className="bg-white p-6 md:p-8 rounded-lg border border-gray-100 shadow-sm">
-                    {/* MOQ Warning Banner for Starcenter */}
+                    {/* MOQ Warning Banner */}
                     {isStarcenter && !moqMet && (
                         <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-md flex items-start gap-3">
                             <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -253,47 +368,159 @@ export default function Checkout() {
                                 placeholder="Street name, house number"
                             ></textarea>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+
+                        {/* Province + City Dropdowns (RajaOngkir) */}
+                        {rajaOngkirEnabled ? (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Province</label>
+                                    <div className="relative">
+                                        <select
+                                            required
+                                            value={selectedProvinceId}
+                                            onChange={handleProvinceChange}
+                                            className="w-full px-4 py-2 border border-gray-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black text-base appearance-none bg-white"
+                                        >
+                                            <option value="">Pilih Provinsi</option>
+                                            {provinces.map(p => (
+                                                <option key={p.province_id} value={p.province_id}>{p.province}</option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">City / District</label>
+                                    <div className="relative">
+                                        <select
+                                            required
+                                            value={selectedCityId}
+                                            onChange={handleCityChange}
+                                            disabled={!selectedProvinceId || loadingCities}
+                                            className="w-full px-4 py-2 border border-gray-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black text-base appearance-none bg-white disabled:bg-gray-50 disabled:text-gray-400"
+                                        >
+                                            <option value="">
+                                                {loadingCities ? 'Memuat kota...' : !selectedProvinceId ? 'Pilih provinsi dulu' : 'Pilih Kota / Kabupaten'}
+                                            </option>
+                                            {cities.map(c => (
+                                                <option key={c.city_id} value={c.city_id}>{c.type} {c.city_name}</option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">City / District</label>
                                 <input
                                     required
                                     type="text"
                                     name="city"
-                                    value={formData.city}
+                                    value={formData.city || ''}
                                     onChange={handleInputChange}
                                     autoComplete="address-level2"
                                     className="w-full px-4 py-2 border border-gray-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black text-base"
                                     placeholder="Jakarta Selatan"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
-                                <input
-                                    required
-                                    type="text"
-                                    name="postalCode"
-                                    value={formData.postalCode}
-                                    onChange={handleInputChange}
-                                    autoComplete="postal-code"
-                                    inputMode="numeric"
-                                    className="w-full px-4 py-2 border border-gray-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black text-base"
-                                    placeholder="12345"
-                                />
-                            </div>
+                        )}
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
+                            <input
+                                required
+                                type="text"
+                                name="postalCode"
+                                value={formData.postalCode}
+                                onChange={handleInputChange}
+                                autoComplete="postal-code"
+                                inputMode="numeric"
+                                className="w-full px-4 py-2 border border-gray-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black text-base"
+                                placeholder="12345"
+                            />
                         </div>
+
+                        {/* Shipping Options */}
+                        {rajaOngkirEnabled && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Shipping Method
+                                    {rajaOngkirEnabled && !selectedCityId && (
+                                        <span className="text-gray-400 font-normal ml-1">(pilih kota dulu)</span>
+                                    )}
+                                </label>
+
+                                {loadingShipping && (
+                                    <div className="flex items-center gap-2 py-3 text-sm text-gray-500">
+                                        <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                                        Mengambil opsi pengiriman...
+                                    </div>
+                                )}
+
+                                {!loadingShipping && selectedCityId && shippingOptions.length === 0 && (
+                                    <p className="text-sm text-amber-600 py-2">Tidak ada kurir tersedia untuk kota ini.</p>
+                                )}
+
+                                {!loadingShipping && shippingOptions.length > 0 && (
+                                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                                        {shippingOptions.map((opt, idx) => {
+                                            const key = `${opt.courier}-${opt.service}`;
+                                            const isSelected = selectedShipping && selectedShipping.courier === opt.courier && selectedShipping.service === opt.service;
+                                            return (
+                                                <button
+                                                    key={key}
+                                                    type="button"
+                                                    onClick={() => setSelectedShipping(opt)}
+                                                    className={`w-full text-left px-3 py-2.5 border rounded-sm flex items-center justify-between transition-colors ${
+                                                        isSelected
+                                                            ? 'border-[#047857] bg-[#f0fdf4] ring-1 ring-[#047857]'
+                                                            : 'border-gray-200 hover:border-gray-400'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <Truck size={14} className={isSelected ? 'text-[#047857]' : 'text-gray-400'} />
+                                                        <div>
+                                                            <span className="text-sm font-medium text-gray-800">
+                                                                {COURIER_LABELS[opt.courier] || opt.courier} {opt.service}
+                                                            </span>
+                                                            {opt.description && (
+                                                                <p className="text-xs text-gray-500">{opt.description}</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right flex-shrink-0 ml-4">
+                                                        <span className="text-sm font-semibold text-gray-900">Rp {opt.cost.toLocaleString('id-ID')}</span>
+                                                        {opt.etd && (
+                                                            <div className="flex items-center gap-1 justify-end mt-0.5">
+                                                                <Clock size={11} className="text-gray-400" />
+                                                                <span className="text-xs text-gray-500">{opt.etd} hari</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         <button
                             type="submit"
-                            disabled={loading || !moqMet}
-                            title={!moqMet ? `Minimum order Rp ${moqThreshold.toLocaleString('id-ID')} belum terpenuhi` : ''}
+                            disabled={!canSubmit}
+                            title={
+                                !moqMet ? `Minimum order Rp ${moqThreshold.toLocaleString('id-ID')} belum terpenuhi`
+                                : (rajaOngkirEnabled && !selectedShipping) ? 'Pilih metode pengiriman'
+                                : ''
+                            }
                             className={`w-full font-bold py-4 rounded-sm shadow-md transition-colors uppercase tracking-widest text-sm mt-6 ${
-                                loading || !moqMet
+                                !canSubmit
                                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     : 'bg-[#047857] hover:bg-[#065F46] text-white'
                             }`}
                         >
-                            {loading ? 'Processing...' : !moqMet ? 'MOQ Belum Terpenuhi' : 'Place Order'}
+                            {loading ? 'Processing...' : !moqMet ? 'MOQ Belum Terpenuhi' : (rajaOngkirEnabled && !selectedShipping) ? 'Pilih Pengiriman' : 'Place Order'}
                         </button>
                     </form>
                 </div>
@@ -336,12 +563,28 @@ export default function Checkout() {
                             </div>
                         )}
                         <div className="flex justify-between text-sm text-gray-600">
-                            <span>Shipping (Flat Rate)</span>
-                            <span>Rp. {shipping.toLocaleString('id-ID')}</span>
+                            {rajaOngkirEnabled ? (
+                                <>
+                                    <span>
+                                        Shipping
+                                        {selectedShipping && (
+                                            <span className="text-gray-400 ml-1 text-xs">
+                                                ({COURIER_LABELS[selectedShipping.courier] || selectedShipping.courier} {selectedShipping.service})
+                                            </span>
+                                        )}
+                                    </span>
+                                    <span>{selectedShipping ? `Rp. ${selectedShipping.cost.toLocaleString('id-ID')}` : '—'}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span>Shipping (Flat Rate)</span>
+                                    <span>Rp. {(20000).toLocaleString('id-ID')}</span>
+                                </>
+                            )}
                         </div>
                         <div className="flex justify-between text-lg font-bold text-gray-900 pt-3 border-t border-gray-200">
                             <span>Total</span>
-                            <span>Rp. {total.toLocaleString('id-ID')}</span>
+                            <span>{shippingCost !== null ? `Rp. ${total.toLocaleString('id-ID')}` : '—'}</span>
                         </div>
                     </div>
                 </div>

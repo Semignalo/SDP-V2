@@ -16,18 +16,15 @@ class AuthControllerTest extends TestCase
             'password_confirmation' => 'password123',
         ]);
 
+        // Register now returns message + email (no token — must verify email first)
         $response->assertStatus(201)
-                 ->assertJsonStructure([
-                     'message',
-                     'user' => [
-                         'id', 'name', 'email', 'role', 'referral_code', 'tier'
-                     ],
-                     'token',
-                 ]);
+                 ->assertJsonStructure(['message', 'email'])
+                 ->assertJsonMissing(['token']);
 
         $this->assertDatabaseHas('users', [
-            'email' => 'john@example.com',
-            'name'  => 'John Doe',
+            'email'             => 'john@example.com',
+            'name'              => 'John Doe',
+            'email_verified_at' => null, // not yet verified
         ]);
     }
 

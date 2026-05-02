@@ -13,6 +13,7 @@ use App\Models\Order;
 use App\Models\PaymentProof;
 use App\Models\SystemSetting;
 use App\Services\CommissionService;
+use App\Services\MidtransService;
 use App\Services\OrderService;
 use App\Services\TierService;
 use Illuminate\Http\Request;
@@ -25,7 +26,7 @@ class OrderController extends Controller
      * Create a new order (checkout).
      * Validasi variant_id milik product_id ditangani oleh CheckoutRequest.
      */
-    public function checkout(CheckoutRequest $request, OrderService $orderService)
+    public function checkout(CheckoutRequest $request, OrderService $orderService, MidtransService $midtransService)
     {
         $validated = $request->validated();
 
@@ -33,27 +34,82 @@ class OrderController extends Controller
             $order = $orderService->createOrder(
                 $request->user(),
                 $validated['customer_info'],
-                $validated['items']
+                $validated['items'],
+                [
+                    'courier'             => $validated['shipping_courier'] ?? null,
+                    'service'             => $validated['shipping_service'] ?? null,
+                    'cost'                => $validated['shipping_cost'] ?? null,
+                    'destination_city_id' => $validated['destination_city_id'] ?? null,
+                ]
             );
 
             // Send order confirmation email
             try {
                 Mail::queue(new OrderConfirmedMail($order));
             } catch (\Exception $mailError) {
-                // Log email error but don't fail the request
                 \Log::warning('Failed to queue order confirmation email', ['order_id' => $order->id]);
+            }
+
+            // Generate Midtrans Snap token
+            $snapToken = null;
+            try {
+                $snapToken = $midtransService->createSnapToken($order);
+            } catch (\Exception $e) {
+                \Log::error('Midtrans snap token error', ['order_id' => $order->id, 'error' => $e->getMessage()]);
             }
 
             return response()->json([
                 'data' => [
-                    'message' => 'Pesanan berhasil dibuat.',
+                    'message'      => 'Pesanan berhasil dibuat.',
                     'order_number' => $order->order_number,
-                    'order_id' => $order->id,
-                    'total' => (float) $order->total,
+                    'order_id'     => $order->id,
+                    'total'        => (float) $order->total,
+                    'snap_token'   => $snapToken,
                 ],
             ], 201);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * Cancel an unpaid order (user-initiated).
+     * Hanya bisa jika status masih pending_payment.
+     */
+    public function cancelOrder(Request $request, string $orderNumber, OrderService $orderService)
+    {
+        $order = Order::where('order_number', $orderNumber)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        if ($order->status !== 'pending_payment') {
+            return response()->json([
+                'message' => 'Pesanan tidak dapat dibatalkan karena sudah diproses atau sudah lunas.',
+            ], 422);
+        }
+
+        $order->update(['status' => 'rejected']);
+        $orderService->restoreStock($order);
+
+        return response()->json(['message' => 'Pesanan berhasil dibatalkan.']);
+    }
+
+    /**
+     * Re-generate Snap token for an unpaid order (user closed popup without paying).
+     */
+    public function repaySnapToken(Request $request, string $orderNumber, MidtransService $midtransService)
+    {
+        $order = Order::where('order_number', $orderNumber)
+            ->where('user_id', $request->user()->id)
+            ->where('status', 'pending_payment')
+            ->firstOrFail();
+
+        try {
+            $snapToken = $midtransService->createSnapToken($order, '-' . time());
+            return response()->json(['snap_token' => $snapToken]);
+        } catch (\Exception $e) {
+            \Log::error('Repay snap token error', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+            return response()->json(['message' => 'Gagal membuat token pembayaran.'], 500);
         }
     }
 

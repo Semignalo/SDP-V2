@@ -1,5 +1,5 @@
 # STARINC Platform — Developer Guideline
-> Last updated: 2026-04-15 | Stack: React 19 + Vite / Laravel 13 / MySQL | Developed with Claude Code
+> Last updated: 2026-05-02 | Stack: React 19 + Vite / Laravel 13 / MySQL | Developed with Claude Code
 
 ---
 
@@ -18,10 +18,10 @@
 ## 1. Status Proyek Saat Ini
 
 ```
-[██████████░░░░░░░░░░] 50% — Foundation Complete, Migration Incomplete
+[████████████████░░░░] 78% — Core Features Complete, Deployment Pending
 ```
 
-Fondasi arsitektur Laravel API sudah solid. Namun migrasi dari Firebase **belum 100% selesai** — 2 halaman admin masih menggunakan Firestore secara aktif. Platform belum production-ready.
+Fondasi arsitektur sudah solid, Firebase sudah dihapus, payment gateway Midtrans sudah live (sandbox), email verification aktif. Yang tersisa adalah deployment ke production (Phase 3) dan konfigurasi SMTP email.
 
 **Tech Stack:**
 - Frontend : React 19 + Vite 7 + Tailwind CSS 4 + Axios
@@ -43,6 +43,8 @@ Fondasi arsitektur Laravel API sudah solid. Namun migrasi dari Firebase **belum 
 - [x] Role system: `regular`, `starcenter`, `admin`
 - [x] Referral code generation otomatis (8 char unique)
 - [x] Middleware `EnsureIsAdmin` untuk proteksi route admin
+- [x] Email verification saat registrasi (`MustVerifyEmail`, `EmailVerificationController`)
+- [x] Forgot password & reset password flow (`PasswordResetController`)
 
 #### Database Schema
 - [x] Migration: `users` (extended dengan phone, address, role, tier_id, referrer_id, referral_code, cumulative_spending, last_transaction_at)
@@ -72,9 +74,20 @@ Fondasi arsitektur Laravel API sudah solid. Namun migrasi dari Firebase **belum 
 - [x] Settings: tiers, system settings (komisi rates, MOQ, shipping)
 - [x] Export orders (CSV/PDF placeholder)
 
+#### Payment Gateway (Midtrans)
+- [x] `MidtransService` — generate Snap token dengan item_details, customer_details, retry suffix
+- [x] `WebhookController::midtrans()` — validasi signature SHA512, idempotency guard, handle settlement/capture/expire/deny
+- [x] Migration `midtrans_order_id` + `payment_method` di tabel `orders`
+- [x] Webhook route public `POST /api/webhook/midtrans` (tanpa auth)
+- [x] Re-pay endpoint `POST /orders/{orderNumber}/repay` — generate snap token baru dengan suffix `-{timestamp}`
+- [x] Cancel order endpoint `POST /orders/{orderNumber}/cancel` — hanya saat `pending_payment`, restore stok
+- [x] Feature tests `MidtransWebhookTest` — 10 tests (signature, settlement, capture, expire, idempotency, retry order_id)
+
 #### User API
 - [x] Checkout dengan validasi server-side
-- [x] Upload bukti transfer
+- [x] Checkout returns `snap_token` untuk Midtrans Snap popup
+- [x] Upload bukti transfer (private storage, MIME validation)
+- [x] Cancel order sebelum pembayaran
 - [x] Riwayat order saya
 - [x] Komisi saya (paginated)
 - [x] Referral link + jaringan downline
@@ -82,30 +95,33 @@ Fondasi arsitektur Laravel API sudah solid. Namun migrasi dari Firebase **belum 
 ### Frontend (React)
 
 #### Halaman Publik
-- [x] Home (hero, produk unggulan, CMS dari API)
+- [x] Home (hero, produk unggulan, CMS dari API) — redesign editorial, bilingual EN/ID
 - [x] Catalog (filter, search, pagination)
-- [x] Product Detail (gambar, varian, tambah ke cart)
+- [x] Product Detail (gambar, varian, tambah ke cart) — tampilkan "Stok Habis", disable button jika stok habis
 - [x] Cart Drawer (state + localStorage persist)
-- [x] Checkout (form alamat, kalkulasi real-time, upload bukti bayar)
-- [x] Invoice (public, by order number)
+- [x] Checkout (form alamat, kalkulasi real-time, Midtrans Snap popup, fallback manual transfer)
+- [x] Invoice (by order number) — tampil info Midtrans atau transfer manual, upload bukti bayar, tombol Bayar Sekarang (repay), tombol Batalkan Pesanan
 - [x] Login & Register (dengan referral code dari URL param)
+- [x] Verify Email (instruksi + resend button setelah register)
+- [x] Forgot Password & Reset Password
 - [x] Join Starcenter page
 - [x] Center Shop (halaman khusus starcenter)
 
 #### Halaman User Authenticated
 - [x] Profile (info, edit, ganti password)
-- [x] Track Orders (riwayat + status timeline)
+- [x] Track Orders / Profile Orders (riwayat + status timeline, upload bukti bayar, cancel pesanan)
 - [x] Network Tree (visualisasi jaringan downline)
 
 #### Halaman Admin
 - [x] Dashboard (chart revenue via Recharts)
-- [x] Products (CRUD + upload gambar)
-- [x] Orders (list, filter, update status, lihat bukti bayar)
-- [x] Users (list, filter, update role)
+- [x] Products (CRUD + upload gambar + stock management)
+- [x] Orders (list, filter, update status, lihat bukti bayar, tampil info Midtrans jika bayar via gateway)
+- [x] Users (list, filter, update role, detail user, network, order history)
 - [x] Commissions (list, pay, bulk pay)
 - [x] Tiers (edit threshold & discount)
-- [x] Appearance (CMS beranda) — **masih Firebase**
-- [x] Payment Settings (rekening bank) — **masih Firebase**
+- [x] Appearance (CMS beranda, logo upload, editorial section)
+- [x] Payment Settings (rekening bank via Laravel API)
+- [x] Starcenter Applications (list, detail, approve/reject)
 
 #### State Management
 - [x] `AuthContext` — user, token, login/logout
@@ -122,26 +138,7 @@ Fondasi arsitektur Laravel API sudah solid. Namun migrasi dari Firebase **belum 
 
 ### CRITICAL — Harus Selesai Sebelum Production
 
-#### P0.1 — Migrasi 2 Halaman Admin dari Firebase ke Laravel
-
-**File:** `src/pages/admin/Appearance.jsx` (538 baris) + `src/pages/admin/PaymentSettings.jsx` (137 baris)
-
-Kedua file ini masih `import { db } from '../../lib/firebase'` dan `getDoc/setDoc` ke Firestore.
-API Laravel-nya **sudah ada** (`/api/admin/settings` dan `/api/admin/appearance`) — tinggal connect.
-
-**Cara fix:**
-```jsx
-// Ganti ini:
-import { db } from '../../lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-
-// Jadi ini:
-import { settingsApi } from '../../api/settingsApi';
-```
-
-Setelah kedua file ini dimigrasi, hapus `src/lib/firebase.js` dan hapus `"firebase"` dari `package.json`.
-
-#### P0.2 — Scheduled Task Tier Downgrade Tidak Terdaftar
+#### P0.1 — Scheduled Task Tier Downgrade Tidak Terdaftar
 
 **File:** `starinc-api/routes/console.php`
 
@@ -160,19 +157,7 @@ Lalu pastikan cron server berjalan:
 * * * * * cd /path/to/starinc-api && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-#### P0.3 — Firebase API Key Exposed di Source Code
-
-**File:** `src/lib/firebase.js`
-
-API key Firebase hardcoded dan akan ikut ter-commit ke Git dan ter-bundle ke production build.
-Setelah migrasi P0.1 selesai, file ini harus **dihapus total**.
-
-Sementara sebelum P0.1 selesai, pindahkan ke `.env`:
-```
-VITE_FIREBASE_API_KEY=...
-```
-
-#### P0.4 — Migrasi Database SQLite → MySQL
+#### P0.2 — Migrasi Database SQLite → MySQL
 
 Untuk production, SQLite tidak mendukung concurrent writes dengan baik.
 
@@ -192,6 +177,28 @@ cd starinc-api
 php artisan migrate:fresh --seed
 ```
 
+#### P0.3 — Konfigurasi SMTP Email untuk Production
+
+Email sudah di-queue (`Mail::queue()`) tapi belum bisa terkirim karena `MAIL_PASSWORD` di `.env` masih kosong. Semua mailable sudah dibuat (OrderConfirmed, PaymentApproved, PaymentRejected, OrderShipped, VerifyEmail, ResetPassword).
+
+**Opsi A — Gmail SMTP (lebih cepat):**
+```
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=starinc.id@gmail.com
+MAIL_PASSWORD=<app-password-16-digit>
+MAIL_FROM_ADDRESS="starinc.id@gmail.com"
+```
+Setup: aktifkan 2FA di Google → buka myaccount.google.com/apppasswords → generate App Password.
+
+**Opsi B — Resend API (lebih proper, sudah terinstall):**
+```
+MAIL_MAILER=resend
+MAIL_FROM_ADDRESS="noreply@starinc.com"  # harus domain sendiri
+```
+Package `resend/resend-laravel` sudah terinstall, `RESEND_API_KEY` sudah ada di `.env`.
+
 ---
 
 ### P1 — Fitur Bisnis yang Belum Ada
@@ -206,34 +213,40 @@ Yang perlu dibuat:
 - Endpoint `POST /user/wallet/withdraw` — request penarikan
 - Halaman frontend: Wallet di Profile
 
-#### P1.2 — Notifikasi (Email / WhatsApp)
+#### P1.2 — Notifikasi (Email)
 
-Tidak ada notifikasi saat:
-- Order berhasil dibuat (konfirmasi ke pembeli)
-- Admin mengubah status order ke PROCESSING / COMPLETED
-- Komisi masuk ke earner
+Email sudah di-queue untuk semua event penting (OrderConfirmed, PaymentApproved, PaymentRejected, OrderShipped, VerifyEmail, ResetPassword). **Yang tersisa hanya konfigurasi SMTP** — lihat P0.3 di atas.
 
-Minimal: Email via Laravel Mail + `SMTP` atau `Mailtrap` untuk dev.
-Opsional: WhatsApp via Fonnte/Wablas API.
+Opsional: WhatsApp via Fonnte/Wablas API (belum dikerjakan).
 
-#### P1.3 — Stok Produk (Inventory)
+#### P1.3 — Validasi & Pengurangan Stok di OrderService
 
-`OrderService` sudah ada placeholder untuk inventory tapi kolom `stock` di tabel produk belum divalidasi secara ketat. Saat ini tidak ada pengurangan stok setelah order.
+UI "Stok Habis" sudah ada di `ProductDetail.jsx`. Admin bisa set stock lewat form produk. Yang **masih belum ada**:
 
-Yang perlu:
-- Validasi stok di `OrderService::createOrder()`
-- Pengurangan stok setelah order confirmed
-- Tampilkan status "Habis" di frontend jika stok = 0
+```php
+// starinc-api/app/Services/OrderService.php — createOrder()
+// Tambahkan sebelum menyimpan order:
+foreach ($items as $item) {
+    $product = Product::find($item['product_id']);
+    if ($product->stock !== null && $product->stock < $item['quantity']) {
+        throw new \Exception("Stok {$product->title} tidak mencukupi.");
+    }
+}
+// Setelah order tersimpan:
+foreach ($order->items as $item) {
+    Product::where('id', $item->product_id)->whereNotNull('stock')
+        ->decrement('stock', $item->quantity);
+}
+```
 
 #### P1.4 — Rate Limiting Auth
 
-Endpoint login tidak memiliki throttle, rentan brute-force:
+Login/register sudah ada `throttle:30,1` tapi terlalu longgar. Perketat:
 
 ```php
-// starinc-api/routes/api.php
 Route::middleware('throttle:5,1')->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/register', ...);
+    Route::post('/login', ...);
 });
 ```
 
@@ -338,7 +351,8 @@ const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
 | B2 | `api.php` route `/user/referral-link` | 50+ baris logika bisnis inline di route file, bukan di controller | Low |
 | B3 | `api.php` route `/user/commissions` | Query + paginate inline di route file | Low |
 | B4 | `OrderController` | Tidak ada validasi bahwa `variant_id` memang milik `product_id` yang dikirim | Medium |
-| B5 | `src/pages/admin/Appearance.jsx` | `firebase.js` exposed API key | Critical |
+| B5 | `src/pages/admin/Appearance.jsx` | `firebase.js` exposed API key | ✅ Fixed — Firebase dihapus |
+| B6 | `OrderService::createOrder()` | Tidak ada validasi atau pengurangan stok — order bisa dibuat meski stok 0 | Medium |
 
 ### Technical Debt
 
@@ -566,14 +580,15 @@ git commit -m "feat: [deskripsi singkat]"
 ### Phase 0 — Cleanup & Stabilisasi (Minggu 1)
 > Target: Platform bebas dari Firebase, aman, dan scheduled task jalan
 
-| # | Task | File(s) | Estimasi |
-|---|------|---------|----------|
-| 0.1 | Migrasi `PaymentSettings.jsx` dari Firebase ke `/api/admin/settings` | `PaymentSettings.jsx` | 1 sesi |
-| 0.2 | Migrasi `Appearance.jsx` dari Firebase ke `/api/admin/appearance` | `Appearance.jsx` | 2 sesi |
-| 0.3 | Hapus `src/lib/firebase.js` dan `firebase` dari `package.json` | `package.json`, `firebase.js` | 1 sesi |
-| 0.4 | Daftarkan `Schedule::command('tier:check-downgrades')` | `routes/console.php` | 5 menit |
-| 0.5 | Tambahkan `throttle:5,1` di route login & register | `routes/api.php` | 5 menit |
-| 0.6 | Pindahkan inline route logic ke `NetworkController` + `CommissionController` | `routes/api.php` | 1 sesi |
+| # | Task | File(s) | Estimasi | Status |
+|---|------|---------|----------|--------|
+| 0.1 | Migrasi `PaymentSettings.jsx` dari Firebase ke `/api/admin/settings` | `PaymentSettings.jsx` | 1 sesi | ✅ Done |
+| 0.2 | Migrasi `Appearance.jsx` dari Firebase ke `/api/admin/appearance` | `Appearance.jsx` | 2 sesi | ✅ Done |
+| 0.3 | Hapus `src/lib/firebase.js` dan `firebase` dari `package.json` | `package.json`, `firebase.js` | 1 sesi | ✅ Done |
+| 0.4 | Daftarkan `Schedule::command('tier:check-downgrades')` | `routes/console.php` | 5 menit | ⏳ Pending |
+| 0.5 | Tambahkan `throttle:5,1` di route login & register | `routes/api.php` | 5 menit | ⏳ Pending |
+| 0.6 | Pindahkan inline route logic ke `NetworkController` + `CommissionController` | `routes/api.php` | 1 sesi | ⏳ Pending |
+| 0.7 | **Verifikasi Email Registrasi** — `MustVerifyEmail`, controller, frontend flow | `User.php`, `EmailVerificationController.php`, `VerifyEmail.jsx` | 2 sesi | ✅ Done |
 
 ### Phase 1 — Production Readiness (Minggu 2)
 > Target: Bisa dipakai user nyata
@@ -584,7 +599,7 @@ git commit -m "feat: [deskripsi singkat]"
 | 1.2 | Tambahkan database indexes via migration baru | migration baru | 1 sesi |
 | 1.3 | Cache `SystemSetting::getValue()` dengan `Cache::remember()` | `SystemSetting.php` | 1 sesi |
 | 1.4 | Validasi & pengurangan stok produk di `OrderService` | `OrderService.php` | 1 sesi |
-| 1.5 | Validasi upload bukti bayar (MIME type, max size, private storage) | `OrderController.php` | 1 sesi |
+| 1.5 | Validasi upload bukti bayar (MIME type, max size, private storage) | `OrderController.php` | 1 sesi | ✅ Done |
 | 1.6 | Frontend: Tampilkan peringatan MOQ di Cart untuk starcenter | `CartDrawer.jsx` | 1 sesi |
 
 ### Phase 2 — Optimasi Performa (Minggu 3)
@@ -609,17 +624,23 @@ git commit -m "feat: [deskripsi singkat]"
 | 3.3 | Update `CommissionService` — credit ke wallet saat commission paid | `CommissionService.php` | 1 sesi |
 | 3.4 | API: `GET /user/wallet` + `POST /user/wallet/withdraw` | `WalletController.php` | 1 sesi |
 | 3.5 | Frontend: Halaman Wallet di Profile | `src/pages/profile/Wallet.jsx` | 2 sesi |
-| 3.6 | Email notifikasi order + komisi via Laravel Mail | `app/Mail/` | 2 sesi |
+| 3.6 | Konfigurasi SMTP email (Gmail App Password atau Resend API) | `starinc-api/.env` | 30 menit |
 
-### Phase 4 — Payment Gateway (Bulan 2)
-> Target: Tidak perlu transfer manual
+### Phase 4 — Payment Gateway Midtrans ✅ SELESAI
+> Semua sudah dikerjakan — sandbox live dan verified
 
-| # | Task | Estimasi |
-|---|------|----------|
-| 4.1 | Integrasi Midtrans Snap API (payment gateway Indonesia) | 3-4 sesi |
-| 4.2 | Webhook handler untuk konfirmasi otomatis dari Midtrans | 2 sesi |
-| 4.3 | Update order flow di frontend (redirect ke Midtrans Snap) | 2 sesi |
-| 4.4 | Admin tidak perlu verifikasi manual lagi | 1 sesi |
+| # | Task | File(s) | Status |
+|---|------|---------|--------|
+| 4.1 | Install `midtrans/midtrans-php`, konfigurasi `.env` + `config/services.php` | `composer.json`, `.env` | ✅ Done |
+| 4.2 | Buat `MidtransService` — generate Snap token + retry suffix | `app/Services/MidtransService.php` | ✅ Done |
+| 4.3 | Update `OrderController::checkout()` — return `snap_token` + `repaySnapToken()` + `cancelOrder()` | `OrderController.php` | ✅ Done |
+| 4.4 | Migration `midtrans_order_id` + `payment_method` di tabel `orders` | migration | ✅ Done |
+| 4.5 | `WebhookController::midtrans()` — signature, idempotency, retry order_id, tier+commission trigger | `WebhookController.php` | ✅ Done |
+| 4.6 | Route webhook public + repay + cancel | `routes/api.php` | ✅ Done |
+| 4.7 | Frontend: Snap JS lazy-loaded, `window.snap.pay()` di Checkout + Invoice | `Checkout.jsx`, `Invoice.jsx` | ✅ Done |
+| 4.8 | Admin Orders: tampil info Midtrans (payment_method, transaction_id) | `admin/Orders.jsx` | ✅ Done |
+| 4.9 | Feature tests: `MidtransWebhookTest` — 10 tests passing | `tests/Feature/` | ✅ Done |
+| 4.10 | Cancel order UI (Invoice + ProfileOrders) + API + backend | multiple | ✅ Done |
 
 ### Phase 5 — PWA & Advanced (Bulan 3+)
 > Target: Platform bisa diinstall di HP

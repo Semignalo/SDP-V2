@@ -168,14 +168,15 @@ class StarCenterApplicationController extends Controller
             $password = Str::random(12);
 
             $user = User::create([
-                'name'         => $app->full_name,
-                'email'        => $app->email,
-                'phone'        => $app->phone,
-                'password'     => Hash::make($password),
-                'role'         => 'starcenter',
-                'tier_id'      => $diamondTier?->id,
-                'referrer_id'  => $app->referrer_id,
-                'referral_code'=> strtoupper(Str::random(8)),
+                'name'              => $app->full_name,
+                'email'             => $app->email,
+                'phone'             => $app->phone,
+                'password'          => Hash::make($password),
+                'role'              => 'starcenter',
+                'tier_id'           => $diamondTier?->id,
+                'referrer_id'       => $app->referrer_id,
+                'referral_code'     => strtoupper(Str::random(8)),
+                'email_verified_at' => now(), // Admin-approved accounts are auto-verified
             ]);
 
             // Populate closure table

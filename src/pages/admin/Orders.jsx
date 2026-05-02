@@ -490,8 +490,21 @@ export default function Orders() {
                                 </div>
                             </div>
 
-                            {/* Payment Proof Review */}
-                            {selectedOrder.payment_proof && (
+                            {/* Midtrans Payment Info */}
+                            {selectedOrder.payment_method && (
+                                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                                    <h3 className="text-sm font-semibold text-green-900 mb-3">⚡ Pembayaran via Midtrans</h3>
+                                    <div className="space-y-1 text-sm text-green-800">
+                                        <p><span className="font-medium">Metode:</span> {selectedOrder.payment_method.replace(/_/g, ' ').toUpperCase()}</p>
+                                        {selectedOrder.midtrans_order_id && (
+                                            <p><span className="font-medium">Transaction ID:</span> <span className="font-mono text-xs">{selectedOrder.midtrans_order_id}</span></p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Payment Proof Review — hanya untuk transfer manual */}
+                            {selectedOrder.payment_proof && !selectedOrder.payment_method && (
                                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                                     <h3 className="text-sm font-semibold text-blue-900 mb-3">📋 Bukti Pembayaran</h3>
                                     <div className="space-y-3">

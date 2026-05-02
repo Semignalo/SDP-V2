@@ -20,6 +20,7 @@ class AdminUserSeeder extends Seeder
                 'role' => 'admin',
                 'tier_id' => $diamondTier?->id,
                 'phone' => '081234567890',
+                'email_verified_at' => now(),
             ]
         );
     }

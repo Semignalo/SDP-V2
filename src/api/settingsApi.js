@@ -22,6 +22,18 @@ export const settingsApi = {
     }
 };
 
+export const testimonialsApi = {
+    getAll: () => apiClient.get('/testimonials').then(r => r.data),
+};
+
+export const adminTestimonialsApi = {
+    getAll:   ()       => apiClient.get('/admin/testimonials').then(r => r.data),
+    create:   (data)   => apiClient.post('/admin/testimonials', data).then(r => r.data),
+    update:   (id, d)  => apiClient.put(`/admin/testimonials/${id}`, d).then(r => r.data),
+    remove:   (id)     => apiClient.delete(`/admin/testimonials/${id}`).then(r => r.data),
+    reorder:  (items)  => apiClient.put('/admin/testimonials/reorder', { items }).then(r => r.data),
+};
+
 export const adminSettingsApi = {
     getSettings: async () => {
         const response = await apiClient.get('/admin/settings');

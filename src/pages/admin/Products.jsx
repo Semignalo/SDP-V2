@@ -18,7 +18,11 @@ const EMPTY_FORM = {
     media: [],
     variants: [],
     isPromo: false,
-    stock: ''
+    stock: '',
+    weight: '',
+    pdfUrl: null,
+    pdfFile: null,
+    removePdf: false,
 };
 
 export default function Products() {
@@ -106,7 +110,11 @@ export default function Products() {
                 ? product.variants.map(v => ({ name: v.name, price: v.price }))
                 : [],
             isPromo: product.is_promo || product.isPromo || false,
-            stock: product.stock !== null && product.stock !== undefined ? String(product.stock) : ''
+            stock: product.stock !== null && product.stock !== undefined ? String(product.stock) : '',
+            weight: product.weight !== null && product.weight !== undefined ? String(product.weight) : '',
+            pdfUrl: product.pdf_url || null,
+            pdfFile: null,
+            removePdf: false,
         });
         setFilesToUpload([]);
         setIsModalOpen(true);
@@ -118,6 +126,14 @@ export default function Products() {
 
     const handleFilesSelected = (files) => {
         setFilesToUpload(prev => [...prev, ...files]);
+    };
+
+    const handlePdfSelected = (file) => {
+        setFormData(prev => ({ ...prev, pdfFile: file, removePdf: false }));
+    };
+
+    const handlePdfRemove = () => {
+        setFormData(prev => ({ ...prev, pdfFile: null, pdfUrl: null, removePdf: true }));
     };
 
     const handleAddVariant = () => {
@@ -154,6 +170,7 @@ export default function Products() {
                 description: formData.description,
                 is_promo: formData.isPromo,
                 stock: formData.stock !== '' ? parseInt(formData.stock, 10) : null,
+                weight: formData.weight !== '' ? parseInt(formData.weight, 10) : null,
                 variants: formData.variants.map(v => ({
                     name: v.name,
                     price: parseFloat(String(v.price).replace(/,/g, ''))
@@ -173,6 +190,12 @@ export default function Products() {
                 setUploadProgress(50);
                 await adminProductApi.uploadMedia(productId, filesToUpload);
                 setFilesToUpload([]);
+            }
+
+            if (productId && formData.removePdf) {
+                await adminProductApi.removePdf(productId);
+            } else if (productId && formData.pdfFile) {
+                await adminProductApi.uploadPdf(productId, formData.pdfFile);
             }
 
             Swal.fire({
@@ -393,6 +416,8 @@ export default function Products() {
                 onRemoveVariant={handleRemoveVariant}
                 onMediaChange={handleMediaChange}
                 onFilesSelected={handleFilesSelected}
+                onPdfSelected={handlePdfSelected}
+                onPdfRemove={handlePdfRemove}
                 onSubmit={handleSubmit}
                 onClose={() => setIsModalOpen(false)}
                 isUploading={isUploading}

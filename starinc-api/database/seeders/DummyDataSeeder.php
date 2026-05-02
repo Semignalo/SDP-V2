@@ -104,6 +104,7 @@ class DummyDataSeeder extends Seeder
                     'role' => 'starcenter',
                     'tier_id' => $tiers['diamond']->id,
                     'referral_code' => $data['code'],
+                    'email_verified_at' => now(),
                 ]
             );
             $centers[] = $center;
@@ -127,6 +128,7 @@ class DummyDataSeeder extends Seeder
                         'role' => 'regular',
                         'referrer_id' => $center->id,
                         'tier_id' => $tiers['bronze']->id,
+                        'email_verified_at' => now(),
                     ]
                 );
                 StarcenterNetwork::firstOrCreate([

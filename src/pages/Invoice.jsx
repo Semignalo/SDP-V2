@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { orderApi } from '../api/orderApi';
-import { CheckCircle, Copy, AlertCircle, Printer, Upload } from 'lucide-react';
+import { CheckCircle, Copy, AlertCircle, Printer, Upload, Zap, CreditCard, XCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { getErrorMessage } from '../api/client';
 
@@ -14,6 +14,27 @@ export default function Invoice() {
     const [paymentConfig, setPaymentConfig] = useState(null);
     const [loading, setLoading] = useState(true);
     const [uploadingProof, setUploadingProof] = useState(false);
+    const [repaying, setRepaying] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
+    const snapReady = useRef(false);
+
+    // Load Midtrans Snap script
+    useEffect(() => {
+        const isProduction = import.meta.env.VITE_MIDTRANS_IS_PRODUCTION === 'true';
+        const snapUrl = isProduction
+            ? 'https://app.midtrans.com/snap/snap.js'
+            : 'https://app.sandbox.midtrans.com/snap/snap.js';
+
+        const existing = document.getElementById('midtrans-snap-script');
+        if (existing) { snapReady.current = true; return; }
+
+        const script = document.createElement('script');
+        script.id = 'midtrans-snap-script';
+        script.src = snapUrl;
+        script.setAttribute('data-client-key', import.meta.env.VITE_MIDTRANS_CLIENT_KEY || '');
+        script.onload = () => { snapReady.current = true; };
+        document.body.appendChild(script);
+    }, []);
 
     useEffect(() => {
         const fetchInvoice = async () => {
@@ -40,9 +61,71 @@ export default function Invoice() {
         }
     }, [loading, order, isPrintMode]);
 
+    // Show success toast when navigated from Midtrans onSuccess callback
+    useEffect(() => {
+        if (!loading && order && searchParams.get('paid') === '1') {
+            Swal.fire({
+                title: 'Pembayaran Berhasil!',
+                text: 'Pesananmu sedang kami proses.',
+                icon: 'success',
+                confirmButtonColor: '#047857',
+                confirmButtonText: 'Lihat Pesanan',
+                timer: 5000,
+            });
+        }
+    }, [loading, order]);
+
     const handleCopy = (text) => {
         navigator.clipboard.writeText(String(text || ''));
         Swal.fire({ title: 'Tersalin!', text: 'Nomor rekening telah disalin.', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+    };
+
+    const handleRepay = async () => {
+        if (!order || repaying) return;
+        setRepaying(true);
+        try {
+            const data = await orderApi.repaySnapToken(order.order_number);
+            if (data.snap_token && window.snap) {
+                window.snap.pay(data.snap_token, {
+                    onSuccess: () => window.location.reload(),
+                    onPending: () => window.location.reload(),
+                    onError: () => {
+                        Swal.fire({ title: 'Pembayaran Gagal', text: 'Silakan coba lagi.', icon: 'error', confirmButtonColor: '#111827' });
+                    },
+                    onClose: () => {},
+                });
+            }
+        } catch (err) {
+            Swal.fire({ title: 'Gagal', text: getErrorMessage(err, 'Gagal membuat sesi pembayaran.'), icon: 'error', confirmButtonColor: '#111827' });
+        } finally {
+            setRepaying(false);
+        }
+    };
+
+    const handleCancel = async () => {
+        if (!order || cancelling) return;
+        const result = await Swal.fire({
+            title: 'Batalkan Pesanan?',
+            text: 'Pesanan yang dibatalkan tidak dapat dipulihkan. Stok akan dikembalikan.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Ya, Batalkan',
+            cancelButtonText: 'Kembali',
+        });
+        if (!result.isConfirmed) return;
+
+        setCancelling(true);
+        try {
+            await orderApi.cancelOrder(order.order_number);
+            await Swal.fire({ title: 'Pesanan Dibatalkan', text: 'Pesananmu telah berhasil dibatalkan.', icon: 'success', confirmButtonColor: '#111827' });
+            window.location.reload();
+        } catch (err) {
+            Swal.fire('Gagal', getErrorMessage(err, 'Gagal membatalkan pesanan.'), 'error');
+        } finally {
+            setCancelling(false);
+        }
     };
 
     const handleUploadProof = async (file) => {
@@ -75,11 +158,13 @@ export default function Invoice() {
 
     // Derive payment status from proof or order status
     const proofStatus = order?.payment_proof?.status; // pending | approved | rejected
-    const paymentStatusLabel = proofStatus === 'approved' ? 'Lunas'
+    const isPaidViaMidtrans = !!order?.payment_method;
+    const midtransPaid = isPaidViaMidtrans && ['processing', 'shipped', 'completed'].includes(order?.status);
+
+    const paymentStatusLabel = (proofStatus === 'approved' || midtransPaid || order?.status === 'completed') ? 'Lunas'
         : proofStatus === 'rejected' ? 'Ditolak'
-        : order?.status === 'completed' ? 'Lunas'
         : 'Menunggu Pembayaran';
-    const paymentStatusClass = (proofStatus === 'approved' || order?.status === 'completed')
+    const paymentStatusClass = (proofStatus === 'approved' || midtransPaid || order?.status === 'completed')
         ? 'text-green-600 bg-green-100'
         : proofStatus === 'rejected' ? 'text-red-600 bg-red-100'
         : 'text-orange-600 bg-orange-100';
@@ -114,10 +199,20 @@ export default function Invoice() {
             <div className="invoice-print-wrapper w-full max-w-xl bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
 
                 {/* Header */}
-                <div className="invoice-print-header bg-[#047857] p-8 text-center text-white">
-                    <CheckCircle className="mx-auto h-16 w-16 mb-4 text-green-300" />
-                    <h1 className="text-3xl font-serif mb-2">Order Dibuat!</h1>
-                    <p className="text-green-100">Silakan selesaikan pembayaran agar pesanan Anda dapat segera kami proses.</p>
+                <div className={`invoice-print-header p-8 text-center text-white ${midtransPaid ? 'bg-[#047857]' : 'bg-gray-800'}`}>
+                    {midtransPaid
+                        ? <Zap className="mx-auto h-16 w-16 mb-4 text-green-300" />
+                        : <CheckCircle className="mx-auto h-16 w-16 mb-4 text-gray-400" />
+                    }
+                    <h1 className="text-3xl font-serif mb-2">
+                        {midtransPaid ? 'Pembayaran Berhasil!' : 'Order Dibuat!'}
+                    </h1>
+                    <p className="text-green-100">
+                        {midtransPaid
+                            ? 'Pesananmu sedang kami proses. Terima kasih!'
+                            : 'Silakan selesaikan pembayaran agar pesanan Anda dapat segera kami proses.'
+                        }
+                    </p>
                 </div>
 
                 {/* Content */}
@@ -130,14 +225,25 @@ export default function Invoice() {
                         </h2>
                     </div>
 
-                    {/* Payment Config */}
-                    {paymentConfig && (
+                    {/* Payment Info */}
+                    {isPaidViaMidtrans ? (
+                        <div className="bg-green-50 p-6 rounded-lg border border-green-200">
+                            <h3 className="font-bold text-green-900 mb-3 flex items-center gap-2">
+                                <Zap size={18} /> Pembayaran via {order.payment_method?.replace(/_/g, ' ').toUpperCase()}
+                            </h3>
+                            <p className="text-sm text-green-700">
+                                {midtransPaid
+                                    ? 'Pembayaran telah dikonfirmasi. Pesanan sedang diproses.'
+                                    : 'Pembayaran sedang diverifikasi oleh penyedia layanan.'
+                                }
+                            </p>
+                        </div>
+                    ) : paymentConfig && (
                         <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
                             <h3 className="font-bold text-gray-900 mb-4">Informasi Transfer</h3>
                             <div className="space-y-4">
                                 <div>
                                     <p className="text-sm text-gray-500">Bank</p>
-                                    {/* Backend uses snake_case: bank_name, account_number, account_name */}
                                     <p className="font-medium text-lg uppercase">{paymentConfig.bank_name}</p>
                                 </div>
                                 <div>
@@ -207,8 +313,41 @@ export default function Invoice() {
                         </div>
                     )}
 
-                    {/* Upload Bukti Bayar — only show if not yet approved */}
-                    {order.status === 'pending_payment' && proofStatus !== 'approved' && (
+                    {/* Tombol Bayar Sekarang — untuk order pending yang belum dibayar via Midtrans */}
+                    {order.status === 'pending_payment' && !isPaidViaMidtrans && (
+                        <div className="border-t border-gray-100 pt-6 print:hidden">
+                            <button
+                                onClick={handleRepay}
+                                disabled={repaying}
+                                className="w-full flex items-center justify-center gap-2 bg-[#047857] text-white py-3.5 rounded-lg font-bold text-sm tracking-widest hover:bg-[#065F46] transition disabled:opacity-60 uppercase"
+                            >
+                                {repaying
+                                    ? <><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> Memproses...</>
+                                    : <><CreditCard size={18} /> Bayar Sekarang</>
+                                }
+                            </button>
+                            <p className="text-xs text-gray-400 text-center mt-2">Atau transfer manual di bawah</p>
+                        </div>
+                    )}
+
+                    {/* Batalkan Pesanan — hanya pending_payment, belum bayar */}
+                    {order.status === 'pending_payment' && (
+                        <div className="border-t border-gray-100 pt-4 print:hidden">
+                            <button
+                                onClick={handleCancel}
+                                disabled={cancelling}
+                                className="w-full flex items-center justify-center gap-2 border border-red-300 text-red-600 py-2.5 rounded-lg text-sm font-medium hover:bg-red-50 transition disabled:opacity-60"
+                            >
+                                {cancelling
+                                    ? <><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-500" /> Membatalkan...</>
+                                    : <><XCircle size={16} /> Batalkan Pesanan</>
+                                }
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Upload Bukti Bayar — hanya untuk transfer manual (bukan Midtrans) */}
+                    {!isPaidViaMidtrans && order.status === 'pending_payment' && proofStatus !== 'approved' && (
                         <div className="border-t border-gray-100 pt-6 print:hidden">
                             <h4 className="text-sm font-bold text-gray-900 mb-2">Upload Bukti Pembayaran</h4>
                             <p className="text-xs text-gray-500 mb-4">Pastikan nominal transfer sesuai. Tim kami akan verifikasi max. 1×24 jam.</p>

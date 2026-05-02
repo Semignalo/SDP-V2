@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Loader2 } from 'lucide-react';
+import React, { useRef } from 'react';
+import { X, Loader2, FileText, Trash2 } from 'lucide-react';
 import ProductMediaUploader from './ProductMediaUploader';
 
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1629198688000-71f23e745b6e?auto=format&fit=crop&q=80&w=800';
@@ -31,12 +31,15 @@ export default function ProductFormModal({
     onRemoveVariant,
     onMediaChange,
     onFilesSelected,
+    onPdfSelected,
+    onPdfRemove,
     onSubmit,
     onClose,
     isUploading,
     uploadProgress
 }) {
     if (!isOpen) return null;
+    const pdfInputRef = useRef();
 
     const inputClass = "w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/20 focus:border-[var(--color-accent)] transition-all";
 
@@ -140,20 +143,36 @@ export default function ProductFormModal({
                         </div>
                     </div>
 
-                    {/* Stock */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Stock <span className="text-gray-400 font-normal">(Kosongkan = unlimited)</span>
-                        </label>
-                        <input
-                            type="number"
-                            name="stock"
-                            value={formData.stock}
-                            onChange={onFormChange}
-                            min="0"
-                            className={inputClass}
-                            placeholder="e.g. 100"
-                        />
+                    {/* Stock & Weight */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Stock <span className="text-gray-400 font-normal">(Kosongkan = unlimited)</span>
+                            </label>
+                            <input
+                                type="number"
+                                name="stock"
+                                value={formData.stock}
+                                onChange={onFormChange}
+                                min="0"
+                                className={inputClass}
+                                placeholder="e.g. 100"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Berat <span className="text-gray-400 font-normal">(gram, default 500g)</span>
+                            </label>
+                            <input
+                                type="number"
+                                name="weight"
+                                value={formData.weight}
+                                onChange={onFormChange}
+                                min="1"
+                                className={inputClass}
+                                placeholder="e.g. 500"
+                            />
+                        </div>
                     </div>
 
                     {/* Description */}
@@ -230,6 +249,50 @@ export default function ProductFormModal({
                         onMediaChange={onMediaChange}
                         onFilesSelected={onFilesSelected}
                     />
+
+                    {/* PDF Brochure */}
+                    <div className="border border-dashed border-gray-200 rounded-lg p-4 bg-gray-50/50">
+                        <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                            <FileText size={16} className="text-gray-400" />
+                            PDF Penjelasan Produk <span className="text-gray-400 font-normal">(Opsional)</span>
+                        </p>
+                        {formData.pdfUrl ? (
+                            <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                <FileText size={18} className="text-blue-500 shrink-0" />
+                                <a href={formData.pdfUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline flex-1 truncate">
+                                    Lihat PDF saat ini
+                                </a>
+                                {onPdfRemove && (
+                                    <button type="button" onClick={onPdfRemove} className="p-1 text-red-400 hover:text-red-600 shrink-0">
+                                        <Trash2 size={15} />
+                                    </button>
+                                )}
+                            </div>
+                        ) : formData.pdfFile ? (
+                            <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                <FileText size={18} className="text-amber-500 shrink-0" />
+                                <span className="text-sm text-gray-700 flex-1 truncate">{formData.pdfFile.name}</span>
+                                <button type="button" onClick={() => onPdfSelected(null)} className="p-1 text-red-400 hover:text-red-600 shrink-0">
+                                    <Trash2 size={15} />
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => pdfInputRef.current?.click()}
+                                className="w-full text-sm text-gray-500 hover:text-gray-700 py-2 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 transition-colors"
+                            >
+                                + Upload PDF
+                            </button>
+                        )}
+                        <input
+                            ref={pdfInputRef}
+                            type="file"
+                            accept=".pdf"
+                            className="hidden"
+                            onChange={e => onPdfSelected && onPdfSelected(e.target.files[0] || null)}
+                        />
+                    </div>
 
                     {/* Action Buttons */}
                     <div className="pt-4 flex gap-3">

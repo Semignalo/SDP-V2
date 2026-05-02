@@ -14,7 +14,7 @@ class Product extends Model
 
     protected $fillable = [
         'title', 'price', 'original_price', 'discount_label',
-        'category', 'description', 'main_image', 'is_promo', 'sort_order', 'stock',
+        'category', 'description', 'main_image', 'is_promo', 'sort_order', 'stock', 'weight', 'pdf_path',
     ];
 
     protected $casts = [
@@ -24,7 +24,7 @@ class Product extends Model
         'stock'          => 'integer',
     ];
 
-    protected $appends = ['main_image_url', 'is_out_of_stock'];
+    protected $appends = ['main_image_url', 'is_out_of_stock', 'pdf_url'];
 
     public function variants(): HasMany
     {
@@ -49,6 +49,12 @@ class Product extends Model
     {
         if (!$this->main_image) return null;
         return Storage::disk('public')->url($this->main_image);
+    }
+
+    public function getPdfUrlAttribute(): ?string
+    {
+        if (!$this->pdf_path) return null;
+        return Storage::disk('public')->url($this->pdf_path);
     }
 
     /**

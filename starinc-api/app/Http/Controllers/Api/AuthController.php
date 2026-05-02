@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\VerifyEmailMail;
 use App\Models\User;
 use App\Models\Tier;
 use App\Models\StarcenterNetwork;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -70,12 +72,16 @@ class AuthController extends Controller
             }
         }
 
-        $token = $user->createToken('auth-token')->plainTextToken;
+        // Send magic link verification email
+        try {
+            Mail::to($user)->send(new VerifyEmailMail($user));
+        } catch (\Throwable) {
+            // Don't fail registration if mail sending fails
+        }
 
         return response()->json([
-            'message' => 'Registrasi berhasil.',
-            'user'    => $this->userResponse($user),
-            'token'   => $token,
+            'message' => 'Registrasi berhasil. Cek email Anda untuk verifikasi akun.',
+            'email'   => $user->email,
         ], 201);
     }
 
@@ -109,6 +115,14 @@ class AuthController extends Controller
             throw ValidationException::withMessages([
                 'email' => ['Email atau password salah.'],
             ]);
+        }
+
+        if (! $user->isAdmin() && ! $user->hasVerifiedEmail()) {
+            return response()->json([
+                'message'          => 'Email belum diverifikasi. Cek inbox Anda atau minta kirim ulang link verifikasi.',
+                'email_unverified' => true,
+                'email'            => $user->email,
+            ], 403);
         }
 
         // Revoke old tokens

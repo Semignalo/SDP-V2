@@ -181,4 +181,57 @@ class ProductController extends Controller
             'media'   => $uploaded,
         ]);
     }
+
+    /** Stream PDF brochure with CORS headers (public). */
+    public function streamPdf(int $id)
+    {
+        $product = Product::findOrFail($id);
+
+        if (!$product->pdf_path || !Storage::disk('public')->exists($product->pdf_path)) {
+            return response()->json(['message' => 'No PDF found.'], 404);
+        }
+
+        $path = Storage::disk('public')->path($product->pdf_path);
+
+        return response()->file($path, [
+            'Content-Type'                => 'application/pdf',
+            'Content-Disposition'         => 'inline',
+            'Access-Control-Allow-Origin' => '*',
+        ]);
+    }
+
+    /** Upload PDF brochure for a product (admin). */
+    public function uploadPdf(Request $request, int $id)
+    {
+        $product = Product::findOrFail($id);
+
+        $request->validate([
+            'pdf' => 'required|file|mimes:pdf|max:10240',
+        ]);
+
+        if ($product->pdf_path) {
+            Storage::disk('public')->delete($product->pdf_path);
+        }
+
+        $path = $request->file('pdf')->store('products/pdfs', 'public');
+        $product->update(['pdf_path' => $path]);
+
+        return response()->json([
+            'message' => 'PDF berhasil diunggah.',
+            'pdf_url' => Storage::disk('public')->url($path),
+        ]);
+    }
+
+    /** Remove PDF brochure from a product (admin). */
+    public function removePdf(int $id)
+    {
+        $product = Product::findOrFail($id);
+
+        if ($product->pdf_path) {
+            Storage::disk('public')->delete($product->pdf_path);
+            $product->update(['pdf_path' => null]);
+        }
+
+        return response()->json(['message' => 'PDF berhasil dihapus.']);
+    }
 }

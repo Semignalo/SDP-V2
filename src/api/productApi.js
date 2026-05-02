@@ -31,15 +31,24 @@ export const adminProductApi = {
 
     uploadMedia: async (id, files) => {
         const formData = new FormData();
-        files.forEach(file => {
-            formData.append('files[]', file);
-        });
-        
+        files.forEach(file => formData.append('files[]', file));
         const response = await apiClient.post(`/admin/products/${id}/media`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
+            headers: { 'Content-Type': 'multipart/form-data' }
         });
         return response.data;
-    }
+    },
+
+    uploadPdf: async (id, file) => {
+        const formData = new FormData();
+        formData.append('pdf', file);
+        const response = await apiClient.post(`/admin/products/${id}/pdf`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        return response.data;
+    },
+
+    removePdf: async (id) => {
+        const response = await apiClient.delete(`/admin/products/${id}/pdf`);
+        return response.data;
+    },
 };

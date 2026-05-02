@@ -19,11 +19,8 @@ export function AuthProvider({ children }) {
             ...userData,
             password_confirmation: userData.password,
         });
-        localStorage.setItem('auth_token', data.token);
-        setCurrentUser(data.user);
-        setUserData(data.user);
-        setUserRole(data.user.role || 'regular');
-        return data.user;
+        // Register no longer returns a token — user must verify email first
+        return data; // { message, email }
     }, []);
 
     const login = useCallback(async (email, password) => {

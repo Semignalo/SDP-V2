@@ -13,7 +13,8 @@ import {
     Crown,
     Menu,
     X,
-    ClipboardList
+    ClipboardList,
+    MessageSquareQuote
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
@@ -36,6 +37,7 @@ export default function AdminLayout() {
         { name: 'Komisi', path: '/admin/commissions', icon: Banknote },
         { name: 'Level / Tiers', path: '/admin/tiers', icon: Crown },
         { name: 'Rekening Pembayaran', path: '/admin/payment-settings', icon: CreditCard },
+        { name: 'Testimoni', path: '/admin/testimonials', icon: MessageSquareQuote },
         { name: 'Tampilan Web', path: '/admin/settings', icon: Settings },
     ];
 

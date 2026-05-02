@@ -17,6 +17,16 @@ export const orderApi = {
         return response.data;
     },
 
+    repaySnapToken: async (orderNumber) => {
+        const response = await apiClient.post(`/orders/${orderNumber}/repay`);
+        return response.data;
+    },
+
+    cancelOrder: async (orderNumber) => {
+        const response = await apiClient.post(`/orders/${orderNumber}/cancel`);
+        return response.data;
+    },
+
     uploadPaymentProof: async (orderId, file) => {
         const formData = new FormData();
         formData.append('file', file);

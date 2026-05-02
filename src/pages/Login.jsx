@@ -28,9 +28,9 @@ export default function Login() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Default redirect to home, or where they came from
     const from = location.state?.from?.pathname || "/";
     const searchParams = new URLSearchParams(location.search);
+    const verifiedParam = searchParams.get('verified');
     const refCodeParam = searchParams.get('ref') || '';
 
     // Initialize isLogin based on URL parameter — MUST be before useMemo
@@ -51,6 +51,27 @@ export default function Login() {
     const [referralStatus, setReferralStatus] = useState(null); // null | 'loading' | 'valid' | 'invalid'
     const [referralOwner, setReferralOwner] = useState('');
     const debounceRef = useRef(null);
+
+    // Show success toast if redirected after email verification
+    useEffect(() => {
+        if (verifiedParam === '1') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Email Terverifikasi!',
+                text: 'Akun Anda sudah aktif. Silakan login.',
+                timer: 3000,
+                showConfirmButton: false,
+            });
+        } else if (verifiedParam === 'already') {
+            Swal.fire({
+                icon: 'info',
+                title: 'Sudah Terverifikasi',
+                text: 'Email Anda sudah diverifikasi sebelumnya. Silakan login.',
+                timer: 2500,
+                showConfirmButton: false,
+            });
+        }
+    }, [verifiedParam]);
 
     useEffect(() => {
         clearTimeout(debounceRef.current);
@@ -91,7 +112,7 @@ export default function Login() {
                     showConfirmButton: false
                 });
             } else {
-                await signup({
+                const result = await signup({
                     name,
                     email,
                     password,
@@ -101,17 +122,17 @@ export default function Login() {
                     city: city || null,
                     postal_code: postalCode || null,
                 });
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Registrasi Berhasil',
-                    text: 'Akun kamu berhasil dibuat!',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
+                navigate(`/verify-email?email=${encodeURIComponent(result.email)}`, { replace: true });
+                return;
             }
             navigate(from, { replace: true });
         } catch (error) {
             console.error(error);
+            // Redirect to verify-email page if email is unverified
+            if (error.response?.data?.email_unverified) {
+                navigate(`/verify-email?email=${encodeURIComponent(email)}`, { replace: true });
+                return;
+            }
             Swal.fire({
                 icon: 'error',
                 title: 'Oops...',

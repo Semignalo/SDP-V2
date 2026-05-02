@@ -31,37 +31,60 @@ export default function Navbar() {
         }
     };
 
+    const navLinks = [
+        { name: lang === 'id' ? 'Beranda' : 'Home', path: '/' },
+        { name: 'Catalog', path: '/products' },
+        { name: lang === 'id' ? 'Konsep Kami' : 'Our concept', path: '/about' },
+        { name: 'FAQ', path: '/faq' },
+        ...(userRole === 'center' ? [{ name: 'Center Shop', path: '/center' }] : []),
+        ...(!currentUser ? [{ name: lang === 'id' ? 'Daftar Center' : 'Become Center', path: '/daftar-center' }] : []),
+    ];
+
+    const firstName = currentUser?.name
+        ? currentUser.name.split(' ')[0]
+        : currentUser?.email?.split('@')[0];
+
     return (
         <>
-            <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100 h-16 sm:h-20">
+            <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100 h-14">
                 <div className="container mx-auto px-4 h-full">
-                    <div className="flex items-center justify-between h-full">
+                    <div className="flex items-center justify-between h-full gap-4 relative">
 
-                        {/* Left: Mobile Menu & Search (Mobile Focused) */}
+                        {/* Left: Desktop Nav / Mobile Hamburger */}
                         <div className="flex items-center gap-1">
+                            {/* Desktop Nav Links */}
+                            <div className="hidden md:flex items-center gap-1">
+                                {navLinks.map((item) => (
+                                    <Link
+                                        key={item.name}
+                                        to={item.path}
+                                        className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                                    >
+                                        {item.name}
+                                    </Link>
+                                ))}
+                            </div>
+                            {/* Mobile hamburger */}
                             <button
                                 onClick={() => setIsOpen(true)}
-                                className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-50 rounded-full transition-colors active:scale-95"
+                                className="md:hidden min-w-[36px] min-h-[36px] flex items-center justify-center hover:bg-gray-50 rounded-full transition-colors active:scale-95"
                                 aria-label="Menu"
                             >
-                                <Menu size={24} strokeWidth={1.5} className="text-gray-900" />
-                            </button>
-                            <button className="min-w-[44px] min-h-[44px] items-center justify-center hover:bg-gray-50 rounded-full transition-colors hidden sm:flex">
-                                <Search size={22} strokeWidth={1.5} className="text-gray-900" />
+                                <Menu size={22} strokeWidth={1.5} className="text-gray-900" />
                             </button>
                         </div>
 
-                        {/* Center: Logo */}
+                        {/* Center: Logo (absolute) */}
                         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                             <Link to="/" className="block">
-                                <img src={settings?.logoUrl || '/logo.png'} alt="Starinc Logo" className="h-8 sm:h-10 w-auto object-contain" />
+                                <img src={settings?.logoUrl || '/logo.png'} alt="Starinc Logo" className="h-7 w-auto object-contain" />
                             </Link>
                         </div>
 
                         {/* Right: Lang toggle + User + Cart */}
-                        <div className="flex items-center gap-1 sm:gap-2">
+                        <div className="flex items-center gap-1">
                             {/* Language Toggle */}
-                            <div className="hidden sm:flex items-center border border-gray-200 rounded-full overflow-hidden text-[11px] font-semibold tracking-wider">
+                            <div className="flex items-center border border-gray-200 rounded-full overflow-hidden text-[11px] font-semibold tracking-wider">
                                 <button
                                     onClick={() => setLang('en')}
                                     className={cn(
@@ -80,55 +103,72 @@ export default function Navbar() {
 
                             {currentUser ? (
                                 <div className="group relative">
-                                    <button className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-50 rounded-full transition-colors gap-2">
-                                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                                            {currentUser.email?.charAt(0).toUpperCase()}
+                                    {/* Pill: avatar + first name */}
+                                    <button className="flex items-center gap-0 rounded-full border border-gray-200 overflow-hidden hover:border-gray-400 transition-colors bg-white">
+                                        {/* Name side */}
+                                        <span className="pl-3 pr-2 text-xs font-semibold text-gray-700 hidden sm:block whitespace-nowrap">
+                                            {firstName}
+                                        </span>
+                                        {/* Avatar side */}
+                                        <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center text-white font-bold text-xs shrink-0">
+                                            {(currentUser.name || currentUser.email)?.charAt(0).toUpperCase()}
                                         </div>
                                     </button>
-                                    <div className="absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                                        <div className="px-4 py-3 border-b border-gray-50">
-                                            <p className="text-sm font-semibold truncate">{currentUser.email}</p>
-                                            <p className="text-xs text-gray-500 capitalize">{userRole} Member</p>
+
+                                    {/* Dropdown */}
+                                    <div className="absolute right-0 top-full mt-2 w-52 bg-white shadow-xl rounded-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                                        <div className="px-4 py-3 border-b border-gray-50 flex items-center gap-3">
+                                            <div className="w-9 h-9 rounded-full bg-gray-900 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                                                {(currentUser.name || currentUser.email)?.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold truncate text-gray-900">{currentUser.name || firstName}</p>
+                                                <p className="text-xs text-gray-400 capitalize">{userRole} Member</p>
+                                            </div>
                                         </div>
                                         <div className="py-2">
-                                            <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary">
+                                            <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-[var(--color-accent)]">
                                                 Profil Saya
                                             </Link>
                                             {userRole === 'center' && (
-                                                <Link to="/center" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary">
+                                                <Link to="/center" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-[var(--color-accent)]">
                                                     Center Shop
                                                 </Link>
                                             )}
                                             {userRole === 'admin' && (
-                                                <Link to="/admin" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary">
+                                                <Link to="/admin" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-[var(--color-accent)]">
                                                     Admin Dashboard
                                                 </Link>
                                             )}
                                             <button
                                                 onClick={handleLogout}
-                                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                                className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 flex items-center gap-2"
                                             >
-                                                <LogOut size={16} />
+                                                <LogOut size={15} />
                                                 Logout
                                             </button>
                                         </div>
                                     </div>
                                 </div>
                             ) : (
-                                <Link to="/login" className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-50 rounded-full transition-colors">
-                                    <User size={22} strokeWidth={1.5} className="text-gray-900" />
+                                <Link to="/login" className="flex items-center gap-0 rounded-full border border-gray-200 overflow-hidden hover:border-gray-400 transition-colors bg-white">
+                                    <span className="pl-3 pr-2 text-xs font-semibold text-gray-700 hidden sm:block">Login</span>
+                                    <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center">
+                                        <User size={16} strokeWidth={1.5} className="text-white" />
+                                    </div>
                                 </Link>
                             )}
 
                             <button
                                 onClick={openCart}
-                                className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-50 rounded-full transition-colors relative active:scale-95"
+                                className="min-w-[36px] min-h-[36px] flex items-center justify-center hover:bg-gray-50 rounded-full transition-colors relative active:scale-95"
                             >
-                                <ShoppingBag size={22} strokeWidth={1.5} className="text-gray-900" />
-                                <span className="absolute top-0.5 right-0.5 bg-[var(--color-accent)] text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
+                                <ShoppingBag size={20} strokeWidth={1.5} className="text-gray-900" />
+                                <span className="absolute top-0 right-0 bg-[var(--color-accent)] text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
                                     {getCartCount()}
                                 </span>
                             </button>
+
                         </div>
                     </div>
                 </div>
@@ -144,26 +184,29 @@ export default function Navbar() {
                 "fixed inset-y-0 left-0 z-[60] w-[80%] max-w-[300px] bg-white shadow-xl transform transition-transform duration-300 ease-in-out flex flex-col",
                 isOpen ? "translate-x-0" : "-translate-x-full"
             )}>
+                {/* Sidebar Header */}
                 <div className="p-5 flex justify-between items-center border-b border-gray-100 bg-gray-50">
-                    <img src={settings?.logoUrl || '/logo.png'} alt="Starinc" className="h-8 w-auto" />
+                    <img src={settings?.logoUrl || '/logo.png'} alt="Starinc" className="h-7 w-auto" />
                     <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
                         <Menu size={20} />
                     </button>
                 </div>
+
+                {/* User Info – mobile */}
+                {currentUser && (
+                    <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                            {(currentUser.name || currentUser.email)?.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{currentUser.name || firstName}</p>
+                            <p className="text-xs text-gray-400 capitalize">{userRole} Member</p>
+                        </div>
+                    </div>
+                )}
                 <div className="flex-1 overflow-y-auto py-2">
                     <ul className="space-y-1">
-                        {[
-                            { name: 'Home', path: '/' },
-                            { name: 'Catalog', path: '/products' },
-                            { name: 'New in', path: '/products' },
-                            { name: 'Sale zone', path: '/products' },
-                            { name: 'Gift Sets', path: '/products' },
-                            { name: 'Pesanan Saya', path: '/orders' },
-                            { name: 'Our concept', path: '/about' },
-                            ...(currentUser ? [{ name: 'Profil Saya', path: '/profile' }] : []),
-                            ...(userRole === 'center' ? [{ name: 'Center Shop', path: '/center' }] : []),
-                            ...(!currentUser ? [{ name: 'Daftar Center', path: '/daftar-center' }] : [])
-                        ].map((item) => (
+                        {navLinks.map((item) => (
                             <li key={item.name}>
                                 <Link
                                     to={item.path}
@@ -174,6 +217,30 @@ export default function Navbar() {
                                 </Link>
                             </li>
                         ))}
+                        {currentUser && (
+                            <>
+                                <li>
+                                    <Link
+                                        to="/profile"
+                                        className="block px-6 py-4 text-gray-900 hover:bg-[var(--color-accent-light)] hover:text-[var(--color-accent-dark)] font-medium text-lg border-l-4 border-transparent hover:border-[var(--color-accent)] transition-all"
+                                        onClick={() => setIsOpen(false)}
+                                    >
+                                        {lang === 'id' ? 'Profil Saya' : 'My Profile'}
+                                    </Link>
+                                </li>
+                                {userRole === 'admin' && (
+                                    <li>
+                                        <Link
+                                            to="/admin"
+                                            className="block px-6 py-4 text-gray-900 hover:bg-[var(--color-accent-light)] hover:text-[var(--color-accent-dark)] font-medium text-lg border-l-4 border-transparent hover:border-[var(--color-accent)] transition-all"
+                                            onClick={() => setIsOpen(false)}
+                                        >
+                                            Admin Dashboard
+                                        </Link>
+                                    </li>
+                                )}
+                            </>
+                        )}
                     </ul>
                 </div>
                 {/* Language toggle – mobile sidebar */}

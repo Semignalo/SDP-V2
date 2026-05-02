@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Services\RajaOngkirService;
 use Illuminate\Support\Facades\DB;
 
 class OrderService
@@ -16,12 +17,13 @@ class OrderService
      *
      * @param  array  $customerInfo  {name, phone, address, city, postal_code}
      * @param  array  $items  [{product_id, variant_id?, quantity}]
+     * @param  array  $shippingData  {courier, service, cost, destination_city_id} — dari RajaOngkir
      *
      * @throws \Exception
      */
-    public function createOrder(?User $user, array $customerInfo, array $items): Order
+    public function createOrder(?User $user, array $customerInfo, array $items, array $shippingData = []): Order
     {
-        return DB::transaction(function () use ($user, $customerInfo, $items) {
+        return DB::transaction(function () use ($user, $customerInfo, $items, $shippingData) {
 
             // 1. Calculate subtotal from DB prices (NOT from frontend)
             //    Gunakan lockForUpdate() untuk mencegah race condition stok saat checkout bersamaan
@@ -77,8 +79,21 @@ class OrderService
             }
             $discountAmount = round($subtotal * $discountPercent / 100, 2);
 
-            // 3. Get shipping cost from settings
-            $shippingCost = (float) SystemSetting::getValue('flat_shipping_cost', 20000);
+            // 3. Get shipping cost — via RajaOngkir jika data tersedia, fallback ke flat rate
+            if (! empty($shippingData['courier']) && ! empty($shippingData['service']) && isset($shippingData['destination_city_id'])) {
+                $rajaOngkir = app(RajaOngkirService::class);
+                $totalWeight = $this->calculateTotalWeight($items);
+                $validated = $rajaOngkir->validateCost(
+                    (int) $shippingData['destination_city_id'],
+                    $totalWeight,
+                    $shippingData['courier'],
+                    $shippingData['service']
+                );
+                // Gunakan harga tervalidasi dari API; fallback ke nilai yang dikirim frontend jika API gagal
+                $shippingCost = $validated !== null ? (float) $validated : (float) ($shippingData['cost'] ?? 0);
+            } else {
+                $shippingCost = (float) SystemSetting::getValue('flat_shipping_cost', 20000);
+            }
 
             // 4. Calculate total
             $total = $subtotal - $discountAmount + $shippingCost;
@@ -93,14 +108,17 @@ class OrderService
 
             // 6. Create order
             $order = Order::create([
-                'user_id' => $user?->id,
-                'customer_info' => $customerInfo,
-                'subtotal' => $subtotal,
-                'discount_percent' => $discountPercent,
-                'discount_amount' => $discountAmount,
-                'shipping_cost' => $shippingCost,
-                'total' => $total,
-                'status' => 'pending_payment',
+                'user_id'             => $user?->id,
+                'customer_info'       => $customerInfo,
+                'subtotal'            => $subtotal,
+                'discount_percent'    => $discountPercent,
+                'discount_amount'     => $discountAmount,
+                'shipping_cost'       => $shippingCost,
+                'shipping_courier'    => $shippingData['courier'] ?? null,
+                'shipping_service'    => $shippingData['service'] ?? null,
+                'destination_city_id' => $shippingData['destination_city_id'] ?? null,
+                'total'               => $total,
+                'status'              => 'pending_payment',
             ]);
 
             // 7. Create order items
@@ -124,6 +142,21 @@ class OrderService
 
             return $order->load('items');
         });
+    }
+
+    /**
+     * Hitung total berat order dalam gram dari data produk di DB.
+     * Produk tanpa weight → pakai default 500g.
+     */
+    public function calculateTotalWeight(array $items): int
+    {
+        $total = 0;
+        foreach ($items as $item) {
+            $product = Product::find($item['product_id']);
+            $weight = $product?->weight ?? 500;
+            $total += $weight * max(1, (int) ($item['quantity'] ?? 1));
+        }
+        return max(1, $total);
     }
 
     /**

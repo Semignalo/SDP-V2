@@ -4,6 +4,7 @@ import { useAppearance } from '../contexts/AppearanceContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { t } from '../locales/home';
 import { productApi } from '../api/productApi';
+import { testimonialsApi } from '../api/settingsApi';
 import { ArrowRight, ArrowLeft, Star, Leaf, Heart, ShieldCheck, Award, Quote } from 'lucide-react';
 
 const PRODUCTS_PER_PAGE = 3;
@@ -56,11 +57,16 @@ export default function Home() {
     const [allProducts, setAllProducts]   = useState([]);
     const [productPage, setProductPage]   = useState(0);
     const [productsError, setProductsError] = useState(false);
+    const [testimonials, setTestimonials] = useState(null); // null = loading
 
     useEffect(() => {
         productApi.getProducts({ per_page: 9 })
             .then(r => { setAllProducts(r.data || []); setProductsError(false); })
             .catch(() => setProductsError(true));
+
+        testimonialsApi.getAll()
+            .then(data => setTestimonials(data))
+            .catch(() => setTestimonials([]));
     }, []);
 
     const BRAND_VALUES = [
@@ -285,6 +291,7 @@ export default function Home() {
             </section>
 
             {/* ── 7. Testimonials ──────────────────────────────────── */}
+            {(testimonials === null || testimonials?.length > 0) && (
             <section className="py-16 md:py-20 bg-white">
                 <div className="container mx-auto px-4 max-w-6xl">
                     <div className="text-center mb-12">
@@ -293,25 +300,26 @@ export default function Home() {
                         <div className="h-px w-10 bg-[var(--color-accent)] mx-auto mt-5" />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {tx.testimonials.map((t, i) => (
-                            <div key={i} className="bg-[#faf8f5] rounded-sm p-7 border border-stone-100 flex flex-col gap-4 relative">
+                        {(testimonials ?? tx.testimonials).map((item, i) => (
+                            <div key={item.id ?? i} className="bg-[#faf8f5] rounded-sm p-7 border border-stone-100 flex flex-col gap-4 relative">
                                 <Quote size={26} className="text-[var(--color-accent)]/15 absolute top-5 right-5" strokeWidth={1} />
                                 <div className="flex gap-0.5">
-                                    {Array.from({ length: t.rating }).map((_, s) => (
+                                    {Array.from({ length: item.rating }).map((_, s) => (
                                         <Star key={s} size={12} className="text-[var(--color-accent)] fill-[var(--color-accent)]" />
                                     ))}
                                 </div>
-                                <p className="text-gray-600 text-sm leading-relaxed flex-1">"{t.text}"</p>
+                                <p className="text-gray-600 text-sm leading-relaxed flex-1">"{item.text}"</p>
                                 <div className="border-t border-stone-200 pt-4">
-                                    <p className="font-semibold text-gray-900 text-sm">{t.name}</p>
-                                    <p className="text-xs text-[var(--color-accent)] mt-0.5">{t.product}</p>
-                                    <p className="text-xs text-gray-400">{t.location}</p>
+                                    <p className="font-semibold text-gray-900 text-sm">{item.name}</p>
+                                    {item.product && <p className="text-xs text-[var(--color-accent)] mt-0.5">{item.product}</p>}
+                                    {item.location && <p className="text-xs text-gray-400">{item.location}</p>}
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
             </section>
+            )}
 
             {/* ── 8. Partnership CTA (moved to bottom, no MLM language) */}
             <section className="py-20 bg-[#111] relative overflow-hidden">
@@ -326,12 +334,12 @@ export default function Home() {
                         {tx.ctaDesc}
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                        <button className="bg-[var(--color-accent)] text-white px-8 py-3.5 text-xs font-bold tracking-widest hover:bg-[var(--color-accent-dark)] transition-colors uppercase rounded-sm">
+                        <Link to="/daftar-center" className="bg-[var(--color-accent)] text-white px-8 py-3.5 text-xs font-bold tracking-widest hover:bg-[var(--color-accent-dark)] transition-colors uppercase rounded-sm">
                             {tx.ctaBtn1}
-                        </button>
-                        <button className="border border-white/25 text-white/70 px-8 py-3.5 text-xs font-bold tracking-widest hover:border-white/60 hover:text-white transition-colors uppercase rounded-sm">
+                        </Link>
+                        <Link to="/partnership" className="border border-white/25 text-white/70 px-8 py-3.5 text-xs font-bold tracking-widest hover:border-white/60 hover:text-white transition-colors uppercase rounded-sm">
                             {tx.ctaBtn2}
-                        </button>
+                        </Link>
                     </div>
                 </div>
             </section>
