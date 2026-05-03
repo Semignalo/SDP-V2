@@ -83,25 +83,19 @@ export default function Navbar() {
 
                         {/* Right: Lang toggle + User + Cart */}
                         <div className="flex items-center gap-1">
-                            {/* Language Toggle */}
-                            <div className="flex items-center border border-gray-200 rounded-full overflow-hidden text-[11px] font-semibold tracking-wider">
+                            {/* Language Toggle – desktop only */}
+                            <div className="hidden md:flex items-center border border-gray-200 rounded-full overflow-hidden text-[11px] font-semibold tracking-wider">
                                 <button
                                     onClick={() => setLang('en')}
-                                    className={cn(
-                                        'px-2.5 py-1 transition-colors',
-                                        lang === 'en' ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-700'
-                                    )}
+                                    className={cn('px-2.5 py-1 transition-colors', lang === 'en' ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-700')}
                                 >EN</button>
                                 <button
                                     onClick={() => setLang('id')}
-                                    className={cn(
-                                        'px-2.5 py-1 transition-colors',
-                                        lang === 'id' ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-700'
-                                    )}
+                                    className={cn('px-2.5 py-1 transition-colors', lang === 'id' ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-700')}
                                 >ID</button>
                             </div>
 
-                            {currentUser ? (
+                                {currentUser ? (
                                 <div className="group relative">
                                     {/* Pill: avatar + first name */}
                                     <button className="flex items-center gap-0 rounded-full border border-gray-200 overflow-hidden hover:border-gray-400 transition-colors bg-white">
