@@ -21,25 +21,25 @@ class EmailVerificationController extends Controller
         $user = User::find($id);
 
         if (! $user) {
-            return redirect($frontendUrl . '/verify-email?error=invalid');
+            return redirect($frontendUrl.'/verify-email?error=invalid');
         }
 
         if (! $request->hasValidSignature()) {
-            return redirect($frontendUrl . '/verify-email?error=expired&email=' . urlencode($user->email));
+            return redirect($frontendUrl.'/verify-email?error=expired&email='.urlencode($user->email));
         }
 
         if (! hash_equals(sha1($user->email), $hash)) {
-            return redirect($frontendUrl . '/verify-email?error=invalid');
+            return redirect($frontendUrl.'/verify-email?error=invalid');
         }
 
         if ($user->hasVerifiedEmail()) {
-            return redirect($frontendUrl . '/login?verified=already');
+            return redirect($frontendUrl.'/login?verified=already');
         }
 
         $user->email_verified_at = now();
         $user->save();
 
-        return redirect($frontendUrl . '/login?verified=1');
+        return redirect($frontendUrl.'/login?verified=1');
     }
 
     /**
