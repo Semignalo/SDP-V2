@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\VerifyEmailMail;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class EmailVerificationController extends Controller
@@ -57,8 +58,8 @@ class EmailVerificationController extends Controller
         if ($user && ! $user->hasVerifiedEmail()) {
             try {
                 Mail::to($user)->send(new VerifyEmailMail($user));
-            } catch (\Throwable) {
-                // Log but don't expose mail errors
+            } catch (\Throwable $e) {
+                Log::error('Resend verification email failed', ['email' => $request->email, 'error' => $e->getMessage()]);
             }
         }
 

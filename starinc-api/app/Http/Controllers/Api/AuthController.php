@@ -10,6 +10,7 @@ use App\Models\StarcenterNetwork;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
@@ -75,8 +76,8 @@ class AuthController extends Controller
         // Send magic link verification email
         try {
             Mail::to($user)->send(new VerifyEmailMail($user));
-        } catch (\Throwable) {
-            // Don't fail registration if mail sending fails
+        } catch (\Throwable $e) {
+            Log::error('Registration email failed', ['email' => $user->email, 'error' => $e->getMessage()]);
         }
 
         return response()->json([
