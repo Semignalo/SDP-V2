@@ -58,6 +58,7 @@
       "Read(//c/Users/stefa/**)",
       "PowerShell(Get-Command *)",
       "PowerShell(winget list *)",
+      "PowerShell(head *)",
       "PowerShell(cloudflared *)",
       "PowerShell(& \"C:\\\\Program Files \\(x86\\)\\\\cloudflared\\\\cloudflared.exe\" --version)",
       "PowerShell(Invoke-RestMethod -Uri \"https://occasion-columbus-discipline-butterfly.trycloudflare.com/api/webhook/midtrans\" -Method POST -ContentType \"application/json\" -Body '{\"test\":\"ping\"}' -ErrorAction SilentlyContinue | ConvertTo-Json)",
@@ -75,7 +76,12 @@
       "Bash(cp \"Z:/linda/linda/all edit and desain/final edit/3tangan.png\" \"c:/laragon/www/SDP-V2/public/partnership/three-hands.png\")",
       "Bash(cp \"Z:/linda/linda/all edit and desain/final edit/cb 1.png\" \"c:/laragon/www/SDP-V2/public/partnership/product-hero.jpg\")",
       "Bash(cp \"Z:/linda/linda/all edit and desain/final edit/IMG_6427.JPG\" \"c:/laragon/www/SDP-V2/public/partnership/community.jpg\")",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Bash(git fetch *)",
+      "Bash(git merge *)",
+      "Bash(git stash *)",
+      "Bash(xargs cat *)"
     ]
   }
 }

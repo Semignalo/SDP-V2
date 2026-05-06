@@ -142,8 +142,9 @@ curl http://localhost:8000/api/tiers
 ```
 
 Default test credentials:
-- Admin: `admin@sdp.com` / `password123`
-- Starcenter: `center.pusat@starinc.com` / `password123`
+- Admin: `admin@starinc.id` / `password`
+- Starcenter: `sc.jawatimur@starinc.com` / `password123`
+- Regular: `downline.2.1@starinc.com` / `password123`
 
 ## Playwright Profiles
 Authenticated browser profiles are available at `.playwright/profiles/`.

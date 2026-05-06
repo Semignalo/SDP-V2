@@ -36,7 +36,7 @@ export default function Navbar() {
         { name: 'Catalog', path: '/products' },
         { name: lang === 'id' ? 'Konsep Kami' : 'Our concept', path: '/about' },
         { name: 'FAQ', path: '/faq' },
-        ...(userRole === 'center' ? [{ name: 'Center Shop', path: '/center' }] : []),
+        ...(userRole === 'starcenter' ? [{ name: 'Center Shop', path: '/center' }] : []),
         ...(!currentUser ? [{ name: lang === 'id' ? 'Daftar Center' : 'Become Center', path: '/daftar-center' }] : []),
     ];
 
@@ -124,7 +124,7 @@ export default function Navbar() {
                                             <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-[var(--color-accent)]">
                                                 Profil Saya
                                             </Link>
-                                            {userRole === 'center' && (
+                                            {userRole === 'starcenter' && (
                                                 <Link to="/center" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-[var(--color-accent)]">
                                                     Center Shop
                                                 </Link>

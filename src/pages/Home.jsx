@@ -106,9 +106,9 @@ export default function Home() {
                             ? 'Discover the new Gold Standard for your skin.'
                             : 'Temukan standar baru keemasan untuk kulitmu.')}
                     </p>
-                    <button className="border border-white/80 text-white px-10 py-3.5 text-xs tracking-[0.2em] hover:bg-white hover:text-gray-900 transition-colors duration-300 uppercase flex items-center gap-3">
+                    <Link to="/products" className="border border-white/80 text-white px-10 py-3.5 text-xs tracking-[0.2em] hover:bg-white hover:text-gray-900 transition-colors duration-300 uppercase flex items-center gap-3">
                         {tx.heroBtn} <ArrowRight size={13} />
-                    </button>
+                    </Link>
                 </div>
             </section>
 
@@ -157,9 +157,9 @@ export default function Home() {
                             <p className="text-gray-500 text-sm leading-relaxed mb-10 max-w-[400px] mx-auto">
                                 {settings?.goldSerumDescription2 || 'Fragrance-free, lightly scented with ginger and lemon essential oils.'}
                             </p>
-                            <button className="border border-[var(--color-accent)] text-[var(--color-accent)] px-8 py-3.5 text-xs font-bold tracking-[0.2em] hover:bg-[var(--color-accent)] hover:text-white transition-colors uppercase w-[200px] rounded-sm">
-                                {lang === 'en' ? 'TRY NOW' : 'COBA SEKARANG'} &rarr;
-                            </button>
+                            <Link to="/products" className="border border-[var(--color-accent)] text-[var(--color-accent)] px-8 py-3.5 text-xs font-bold tracking-[0.2em] hover:bg-[var(--color-accent)] hover:text-white transition-colors uppercase w-[200px] rounded-sm inline-block text-center">
+                                {tx.feat1Btn} &rarr;
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -193,9 +193,9 @@ export default function Home() {
                             <p className="text-gray-500 text-sm leading-relaxed mb-10 max-w-[400px] mx-auto">
                                 {settings?.secondFeaturedDescription2 || 'Crafted with passion.'}
                             </p>
-                            <button className="border border-[var(--color-accent)] text-[var(--color-accent)] px-8 py-3.5 text-xs font-bold tracking-[0.2em] hover:bg-[var(--color-accent)] hover:text-white transition-colors uppercase w-[200px] rounded-sm">
-                                {lang === 'en' ? 'EXPLORE' : 'JELAJAHI'} &rarr;
-                            </button>
+                            <Link to="/products" className="border border-[var(--color-accent)] text-[var(--color-accent)] px-8 py-3.5 text-xs font-bold tracking-[0.2em] hover:bg-[var(--color-accent)] hover:text-white transition-colors uppercase w-[200px] rounded-sm inline-block text-center">
+                                {tx.feat2Btn} &rarr;
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -216,9 +216,9 @@ export default function Home() {
                         <p className="text-gray-500 text-sm leading-relaxed mb-10">
                             {settings?.editorialDescription || ''}
                         </p>
-                        <button className="border border-gray-900 text-gray-900 px-8 py-3.5 text-xs tracking-[0.15em] hover:bg-gray-900 hover:text-white transition-colors uppercase flex items-center gap-2">
-                            {settings?.editorialCtaText || (lang === 'en' ? 'Browse Collection' : 'Lihat Koleksi')} <ArrowRight size={14} />
-                        </button>
+                        <Link to="/products" className="border border-gray-900 text-gray-900 px-8 py-3.5 text-xs tracking-[0.15em] hover:bg-gray-900 hover:text-white transition-colors uppercase inline-flex items-center gap-2">
+                            {settings?.editorialCtaText || tx.editorialBtn} <ArrowRight size={14} />
+                        </Link>
                     </div>
                 </div>
                 <div className="w-full md:w-[55%] h-[300px] md:h-auto overflow-hidden">

@@ -45,6 +45,11 @@ export const t = {
         ctaBtn1:   'Apply Now',
         ctaBtn2:   'Learn More',
 
+        /* Featured section buttons */
+        feat1Btn: 'Try Now',
+        feat2Btn: 'Explore',
+        editorialBtn: 'Browse Collection',
+
         /* Quote */
         quoteText:   "'True beauty is not merely about appearance,\nbut about how you nurture yourself every single day.'",
         quoteAuthor: 'Starinc Philosophy',
@@ -95,6 +100,11 @@ export const t = {
         ctaDesc:   'Dapatkan akses awal ke produk terbaru, harga khusus mitra, dan dukungan penuh untuk mengembangkan bisnis Anda. Bergabung bersama ratusan mitra di seluruh Indonesia.',
         ctaBtn1:   'Daftar Sekarang',
         ctaBtn2:   'Pelajari Lebih',
+
+        /* Featured section buttons */
+        feat1Btn: 'Coba Sekarang',
+        feat2Btn: 'Jelajahi',
+        editorialBtn: 'Lihat Koleksi',
 
         /* Quote */
         quoteText:   "'Kecantikan sejati bukan tentang penampilan semata,\nmelainkan tentang bagaimana kamu merawat dirimu setiap hari.'",

@@ -1186,11 +1186,11 @@ Item-item berikut ditemukan saat UAT dan perlu dikerjakan:
 
 | # | Item | Status |
 |---|------|--------|
-| B1 | 2 versi bahasa tiap slide — bilingual EN/ID belum lengkap di semua section | ⏳ Pending |
-| B2 | Halaman komisi belum bisa dibuka — debug & fix | ⏳ Pending |
-| B3 | Kode referral tidak muncul di profil user | ⏳ Pending |
-| B4 | Banyak tombol yang belum bisa dipakai — identifikasi & fix | ⏳ Pending |
-| B5 | Update data produk di VPS | ⏳ Pending |
+| B1 | 2 versi bahasa tiap slide — bilingual EN/ID belum lengkap di semua section | ✅ Fixed — tambah locale keys feat1Btn/feat2Btn/editorialBtn di home.js |
+| B2 | Halaman komisi belum bisa dibuka — debug & fix | ✅ Fixed — CommissionController return paginator langsung (bukan `['data' => $paginator]`) |
+| B3 | Kode referral tidak muncul di profil user | ✅ Fixed — networkApi.getReferralInfo() return `response.data.data` (unwrap outer wrapper) |
+| B4 | Banyak tombol yang belum bisa dipakai — identifikasi & fix | ✅ Fixed — Navbar `userRole 'center'→'starcenter'`; 4 tombol Home.jsx jadi `<Link to="/products">` |
+| B5 | Update data produk di VPS | ⏳ Pending — perlu update manual di server 157.10.161.83 |
 
 ---
 

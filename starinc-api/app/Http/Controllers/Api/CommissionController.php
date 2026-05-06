@@ -19,6 +19,6 @@ class CommissionController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return response()->json(['data' => $commissions]);
+        return response()->json($commissions);
     }
 }
