@@ -56,6 +56,11 @@ export const adminApi = {
         return response.data;
     },
 
+    deleteUser: async (id) => {
+        const response = await apiClient.delete(`/admin/users/${id}`);
+        return response.data;
+    },
+
     bulkPayCommissions: async (commissionIds) => {
         const response = await apiClient.post('/admin/commissions/bulk-pay', { commission_ids: commissionIds });
         return response.data;

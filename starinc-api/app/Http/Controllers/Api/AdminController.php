@@ -268,6 +268,38 @@ class AdminController extends Controller
     }
 
     /**
+     * Delete a user account (admin action).
+     * Blocked for: admin accounts and self-deletion.
+     */
+    public function deleteUser(Request $request, int $id)
+    {
+        $target = User::findOrFail($id);
+
+        if ($target->role === 'admin') {
+            return response()->json(['message' => 'Akun admin tidak dapat dihapus.'], 403);
+        }
+
+        if ($request->user()->id === $id) {
+            return response()->json(['message' => 'Tidak dapat menghapus akun sendiri.'], 403);
+        }
+
+        DB::transaction(function () use ($id) {
+            // Detach from MLM network
+            DB::table('starcenter_networks')->where('upline_id', $id)->orWhere('downline_id', $id)->delete();
+
+            // Nullify referrer_id for direct referrals so they become root users
+            User::where('referrer_id', $id)->update(['referrer_id' => null]);
+
+            // Cancel pending commissions linked to this user
+            Commission::where('user_id', $id)->orWhere('source_user_id', $id)->delete();
+
+            User::destroy($id);
+        });
+
+        return response()->json(['message' => 'User berhasil dihapus.']);
+    }
+
+    /**
      * Get user commissions (admin view).
      */
     public function getUserCommissions(Request $request, int $id)

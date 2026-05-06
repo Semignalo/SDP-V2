@@ -1,5 +1,5 @@
 # STARINC Platform — Developer Guideline
-> Last updated: 2026-05-02 | Stack: React 19 + Vite / Laravel 13 / MySQL | Developed with Claude Code
+> Last updated: 2026-05-06 | Stack: React 19 + Vite / Laravel 13 / MySQL | Developed with Claude Code
 
 ---
 
@@ -18,10 +18,10 @@
 ## 1. Status Proyek Saat Ini
 
 ```
-[████████████████░░░░] 78% — Core Features Complete, Deployment Pending
+[██████████████████░░] 88% — VPS Live, Dummy Data Seeded, Sisa: Queue/Cron/SSL/SMTP
 ```
 
-Fondasi arsitektur sudah solid, Firebase sudah dihapus, payment gateway Midtrans sudah live (sandbox), email verification aktif. Yang tersisa adalah deployment ke production (Phase 3) dan konfigurasi SMTP email.
+Fondasi arsitektur sudah solid, Firebase sudah dihapus, payment gateway Midtrans sudah live (sandbox), email verification aktif. VPS sudah live di IDCloudHost (157.10.161.83) dengan MySQL + Nginx + Laravel running. Dummy data sudah dimasukkan (3 starcenter, 7 produk + varian, 9 order). Yang tersisa: Supervisor queue worker, cron jobs, SSL/domain, dan konfigurasi SMTP email.
 
 **Tech Stack:**
 - Frontend : React 19 + Vite 7 + Tailwind CSS 4 + Axios
@@ -595,7 +595,7 @@ git commit -m "feat: [deskripsi singkat]"
 
 | # | Task | File(s) | Estimasi |
 |---|------|---------|----------|
-| 1.1 | Migrasi SQLite → MySQL (update .env + test semua endpoint) | `.env`, `database.sqlite` | 1 sesi |
+| 1.1 | Migrasi SQLite → MySQL (update .env + test semua endpoint) | `.env`, `database.sqlite` | 1 sesi | ✅ Done (VPS pakai MySQL 8.0) |
 | 1.2 | Tambahkan database indexes via migration baru | migration baru | 1 sesi |
 | 1.3 | Cache `SystemSetting::getValue()` dengan `Cache::remember()` | `SystemSetting.php` | 1 sesi |
 | 1.4 | Validasi & pengurangan stok produk di `OrderService` | `OrderService.php` | 1 sesi |

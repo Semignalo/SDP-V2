@@ -1,8 +1,8 @@
 # 🎯 SDP-V2 DEVELOPMENT CHECKPOINT
 
-**Status Terakhir Update:** 2026-05-02  
+**Status Terakhir Update:** 2026-05-06  
 **Overall Completion:** 99% Production-Ready  
-**Current Phase:** Phase 3.2+ (VPS Deployment) ⏳ NEXT — Email Verification ✅ & Midtrans ✅ DONE
+**Current Phase:** Phase 3.2+ (VPS Deployment) 🟡 IN PROGRESS — Email Verification ✅ & Midtrans ✅ DONE
 
 ---
 
@@ -599,30 +599,44 @@ Kerjakan Phase 3.1: Research dan plan infrastructure, dokumentasikan pilihan hos
 
 **Dependencies:** ✅ Phase 3.1 complete + VPS provider dipilih
 
+**Provider dipilih: IDCloudHost (Jakarta) — Basic 2 vCPU, 2 GB RAM, 20 GB SSD — Rp 87.000/bulan**
+**IP Server: 157.10.161.83**
+
 **Tasks:**
-- [ ] VPS Setup:
-  - [ ] Create VPS instance (DigitalOcean / Vultr)
+- [x] VPS Setup:
+  - [x] Create VPS instance (IDCloudHost — Ubuntu 22.04 LTS)
   - [ ] Configure firewall
   - [ ] Setup domain DNS
   
-- [ ] Server Configuration:
-  - [ ] Install PHP 8.3
-  - [ ] Install MySQL 8.0
-  - [ ] Install Nginx
-  - [ ] Install Composer
-  - [ ] Install Node.js + npm
+- [x] Server Configuration:
+  - [x] Install PHP 8.3 + extensions (mbstring, xml, curl, zip, bcmath, sqlite3, mysql)
+  - [x] Install MySQL 8.0 + create database `starinc_db` + user `starinc`
+  - [x] Install Nginx + fix IPv6 issue (disable `listen [::]:80`)
+  - [x] Install Composer 2.9.7
+  - [x] Install Node.js 20 + npm
   
 - [ ] SSL Certificate:
   - [ ] Install Certbot
   - [ ] Generate Let's Encrypt certificate
   - [ ] Configure auto-renewal
   
-- [ ] Application Deploy:
-  - [ ] Clone repository
-  - [ ] Setup .env production
-  - [ ] Run migrations
-  - [ ] Setup Supervisor untuk queue worker
-  - [ ] Setup cron untuk scheduled tasks
+- [x] Application Deploy:
+  - [x] Clone repository dari GitHub (https://github.com/Semignalo/SDP-V2)
+  - [x] npm install + npm run build (frontend)
+  - [x] composer install --no-dev --optimize-autoloader
+  - [x] Setup .env production (MySQL, APP_URL=http://157.10.161.83)
+  - [x] php artisan key:generate
+  - [x] php artisan migrate --seed (MySQL)
+  - [x] php artisan storage:link
+  - [x] Setup Laravel sebagai systemd service (sdp-api.service, port 8000)
+  - [x] Nginx config untuk serve frontend + proxy /api ke Laravel
+  - [x] Frontend accessible di http://157.10.161.83 ✅
+  - [x] API accessible di http://157.10.161.83/api/tiers ✅
+  - [x] VITE_API_URL=http://157.10.161.83/api sudah dikonfigurasi di frontend .env ✅
+  - [x] Dummy data inserted: 3 starcenter (Jatim/Jateng/Jabar), 7 produk + varian, 9 orders ✅
+  - [x] Bug fix: testimonials section muncul meski API return [] (kondisi fallback Home.jsx diperbaiki) ✅
+  - [ ] Setup Supervisor untuk queue worker (email notifications)
+  - [ ] Setup cron untuk scheduled tasks (tier:check-downgrades)
   
 - [ ] Create deployment guide:
   - [ ] Document step-by-step
@@ -634,7 +648,7 @@ Kerjakan Phase 3.2: Setup VPS dan configure production environment
 ```
 
 **Estimasi:** 2-3 hari  
-**Status:** ⏳ WAITING
+**Status:** 🟡 IN PROGRESS (88% — sisa: queue worker, cron, SSL, domain, SMTP email)
 
 ---
 
@@ -967,7 +981,7 @@ Status: 🚀 LIVE
 ## Current Status
 - **Phase 1:** ✅ 100% COMPLETE
 - **Phase 2:** ✅ 100% COMPLETE (All 8 steps finished!)
-- **Phase 3:** 🟡 20% (Phase 3.1 + 3.X complete, 8 steps remaining)
+- **Phase 3:** 🟡 35% (Phase 3.1 + 3.X complete, Phase 3.2 in progress 88%)
 - **Phase 4:** ✅ 100% COMPLETE (Midtrans sandbox live)
 - **Extra Features (di luar phase plan):** ✅ Starcenter Applications, Landing Page Redesign, E2E Playwright, Bilingual EN/ID, Email Verification, Midtrans, Stock UI, Cancel Order
 - **Overall:** 99% Production-Ready
@@ -1020,7 +1034,7 @@ Status: 🚀 LIVE
 - ~~**Next Week:** Phase 2.3 - 2.8 complete~~ ✅ Done
 - ~~**Phase 3.X:** Email Verification~~ ✅ Done
 - ~~**Phase 4:** Midtrans Payment Gateway~~ ✅ Done
-- **Next:** Phase 3.2 (VPS Setup & Deployment) + konfigurasi SMTP email
+- **Next:** Selesaikan Phase 3.2 (queue worker Supervisor, cron, SSL, domain) + Phase 3.5 queue worker + Phase 3.6 cron + konfigurasi SMTP email
 
 ---
 
@@ -1161,8 +1175,8 @@ Example:
 
 ---
 
-**Last Updated:** 2026-05-02 — Development Session (Email Verification, Midtrans, Stock UI, Cancel Order)  
-**Next Review:** Before Phase 3.2 (VPS Setup & Deployment) starts
+**Last Updated:** 2026-05-06 — VPS Deployment Session (IDCloudHost, dummy data, testimonials fix)  
+**Next Review:** Phase 3.2 completion (queue worker, cron, SSL, SMTP)
 
 ---
 
@@ -1549,11 +1563,61 @@ Backlog GUIDELINE.md:
 | Phase 3.X (Email Verification) | ⏳ Belum dimulai | ✅ Complete |
 | Admin Orders Midtrans Info | ❌ Tidak ada | ✅ Tampil payment_method + transaction ID |
 
+---
+
+# 🔧 DEVELOPMENT SESSION — 2026-05-06
+
+**Type:** VPS Deployment + Bug Fix  
+**Status:** ✅ ALL APPLIED
+
+## Session 2026-05-06 — VPS Deployment IDCloudHost + Dummy Data + Testimonials Fix
+
+### Yang Dikerjakan — VPS Deployment
+
+- [x] Pilih provider VPS: **IDCloudHost Jakarta** — Basic 2 vCPU, 2 GB RAM, 20 GB SSD — Rp 87.000/bulan
+- [x] Buat VPS instance Ubuntu 22.04 LTS — IP: 157.10.161.83
+- [x] Install stack: PHP 8.3 + extensions (mbstring, xml, curl, zip, bcmath, mysql), MySQL 8.0, Nginx, Composer 2.9.7, Node.js 20
+- [x] Fix Nginx IPv6 error (`listen [::]:80 failed`) — disable IPv6 listener
+- [x] Buat database MySQL: `starinc_db`, user `starinc`, password `StArInC2024`
+- [x] Clone repo dari GitHub, `composer install --no-dev`, `npm install`, `npm run build`
+- [x] Setup `.env` production (MySQL, APP_URL=http://157.10.161.83, FRONTEND_URL, SANCTUM_STATEFUL_DOMAINS)
+- [x] `php artisan key:generate`, `php artisan migrate --seed`, `php artisan storage:link`
+- [x] Setup systemd service `sdp-api.service` — Laravel di port 8000 sebagai www-data
+- [x] Setup Nginx: serve `/var/www/sdp-v2/` (frontend) + proxy `/api` dan `/storage` ke port 8000
+- [x] Fix CORS: tambah `http://157.10.161.83` ke `config/cors.php` allowed_origins
+- [x] Fix upload 413 error: `client_max_body_size 100M` di Nginx + `upload_max_filesize=100M` di php.ini
+- [x] Fix upload server error: `chown -R www-data:www-data storage/`
+- [x] Fix PDO driver: `systemctl restart sdp-api` setelah install php8.3-mysql
+- [x] Fix admin login: email_verified_at NULL → update via tinker, email admin@starinc.id
+- [x] Frontend `.env` dikonfigurasi: `VITE_API_URL=http://157.10.161.83/api`
+
+### Yang Dikerjakan — Dummy Data
+
+Data dari file dummy akun.txt dimasukkan via `php artisan tinker`:
+
+- [x] User `STARCENTERtes01@gmail.com` (regular/Debby Anggarini) — akun test user biasa dengan data KTP lengkap
+- [x] Starcenter `centerjatim@starinc.id` — Surabaya, tanpa kode referral
+- [x] Starcenter `centerjateng@starinc.id` — Solo, pakai kode referral IZSCAIZD
+- [x] Starcenter `centerjabar@starinc.id` — Bandung, tanpa kode referral
+- [x] 7 produk dengan varian: Dream Kissed, Snow Kissed, Confidence Burst, C-Star, Collastar, KickFatt, PrimeHerb
+- [x] 9 order dummy (3 per starcenter) dengan berbagai status: completed, processing, pending_payment
+
+### Yang Dikerjakan — Bug Fix
+
+- [x] **Bug testimonials tidak tampil di Home** — kondisi di `src/pages/Home.jsx:294`:
+  - **Sebelum:** `{(testimonials === null || testimonials?.length > 0) && (` — section tersembunyi saat API return `[]`
+  - **Sesudah:** `{(testimonials === null || testimonials?.length > 0 || tx.testimonials?.length > 0) && (` — selalu tampil jika ada fallback hardcoded
+  - Rebuild + upload ke VPS → testimoni muncul dari data hardcoded fallback ✅
+
+### Files Changed
+- `src/pages/Home.jsx:294` *(bug fix kondisi testimonials)*
+
+---
+
 ## Yang Masih Perlu Dikerjakan setelah Sesi Ini
 ```
 Satu langkah sebelum email bisa terkirim:
-  [ ] P0.3 — Isi MAIL_PASSWORD di starinc-api/.env
-             (Gmail App Password ATAU ganti MAIL_MAILER=resend)
+  [x] P0.3 — Konfigurasi email via Resend API (domain starincofficial.id verified, lokal + VPS) ✅
 
 Untuk production:
   [ ] P0.2 — Migrasi SQLite → MySQL

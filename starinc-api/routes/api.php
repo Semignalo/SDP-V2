@@ -145,6 +145,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/users/{id}/password', [AdminController::class, 'updateUserPassword']);
         Route::put('/users/{id}/tier', [AdminController::class, 'updateUserTier']);
         Route::get('/users/{id}/commissions', [AdminController::class, 'getUserCommissions']);
+        Route::delete('/users/{id}', [AdminController::class, 'deleteUser']);
 
         // Commissions
         Route::get('/commissions', [AdminController::class, 'commissions']);

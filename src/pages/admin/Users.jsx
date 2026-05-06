@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminApi } from '../../api/adminApi';
 import {
-    Edit2, Search, Shield, Crown, User as UserIcon, Eye,
+    Edit2, Search, Shield, Crown, User as UserIcon, Eye, Trash2,
     List, GitBranch, ChevronRight, ChevronDown, ExternalLink,
 } from 'lucide-react';
 import Swal from 'sweetalert2';
@@ -192,6 +192,30 @@ export default function Users() {
         }
     };
 
+    const handleDeleteUser = async (user) => {
+        const { isConfirmed } = await Swal.fire({
+            title: 'Hapus User?',
+            html: `Akun <b>${user.name || user.email}</b> akan dihapus permanen beserta data komisi dan network-nya. Aksi ini tidak dapat dibatalkan.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Ya, Hapus',
+            cancelButtonText: 'Batal',
+        });
+
+        if (!isConfirmed) return;
+
+        try {
+            await adminApi.deleteUser(user.id);
+            setUsers(prev => prev.filter(u => u.id !== user.id));
+            Swal.fire({ icon: 'success', title: 'User dihapus', showConfirmButton: false, timer: 1500 });
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Gagal menghapus user.';
+            Swal.fire({ icon: 'error', title: 'Error', text: msg });
+        }
+    };
+
     const getRoleBadge = (user) => {
         if (user.role === 'admin') return (
             <span className="px-3 py-1 rounded-full text-xs font-medium border bg-red-100 text-red-800 border-red-200 flex items-center w-max gap-1">
@@ -331,6 +355,15 @@ export default function Users() {
                                                         >
                                                             <Edit2 size={18} />
                                                         </button>
+                                                        {user.role !== 'admin' && (
+                                                            <button
+                                                                onClick={() => handleDeleteUser(user)}
+                                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                                title="Hapus User"
+                                                            >
+                                                                <Trash2 size={18} />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>

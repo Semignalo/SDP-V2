@@ -291,7 +291,7 @@ export default function Home() {
             </section>
 
             {/* ── 7. Testimonials ──────────────────────────────────── */}
-            {(testimonials === null || testimonials?.length > 0) && (
+            {(testimonials === null || testimonials?.length > 0 || tx.testimonials?.length > 0) && (
             <section className="py-16 md:py-20 bg-white">
                 <div className="container mx-auto px-4 max-w-6xl">
                     <div className="text-center mb-12">
