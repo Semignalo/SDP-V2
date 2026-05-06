@@ -29,6 +29,8 @@ class RajaOngkirService
      */
     public function getProvinces(): array
     {
+        if (empty($this->apiKey)) return [];
+
         return Cache::remember('rajaongkir_provinces', 86400, function () {
             $response = Http::withHeaders(['key' => $this->apiKey])
                 ->get("{$this->baseUrl}/province");
@@ -47,6 +49,8 @@ class RajaOngkirService
      */
     public function getCities(int $provinceId): array
     {
+        if (empty($this->apiKey)) return [];
+
         return Cache::remember("rajaongkir_cities_{$provinceId}", 86400, function () use ($provinceId) {
             $response = Http::withHeaders(['key' => $this->apiKey])
                 ->get("{$this->baseUrl}/city", ['province' => $provinceId]);
@@ -68,6 +72,8 @@ class RajaOngkirService
      */
     public function getCost(int $destCityId, int $weightGram, string $courier): array
     {
+        if (empty($this->apiKey)) return [];
+
         $response = Http::withHeaders(['key' => $this->apiKey])
             ->asForm()
             ->post("{$this->baseUrl}/cost", [
