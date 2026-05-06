@@ -15,8 +15,8 @@ class RajaOngkirService
     public function __construct()
     {
         $this->baseUrl    = config('services.rajaongkir.base_url', 'https://api.rajaongkir.com/starter');
-        $this->apiKey     = config('services.rajaongkir.api_key', '');
-        $this->originCityId = (int) config('services.rajaongkir.origin_city_id', 501);
+        $this->apiKey     = config('services.rajaongkir.api_key') ?? '';
+        $this->originCityId = (int) (config('services.rajaongkir.origin_city_id') ?? 501);
     }
 
     public function getOriginCityId(): int
