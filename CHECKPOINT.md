@@ -1175,8 +1175,22 @@ Example:
 
 ---
 
-**Last Updated:** 2026-05-06 — VPS Deployment Session (IDCloudHost, dummy data, testimonials fix)  
+**Last Updated:** 2026-05-06 — Email Resend, Admin Delete User, RajaOngkir fix, Midtrans VPS, throttle  
 **Next Review:** Phase 3.2 completion (queue worker, cron, SSL, SMTP)
+
+---
+
+# 🐛 BUG & TODO LIST — 2026-05-06
+
+Item-item berikut ditemukan saat UAT dan perlu dikerjakan:
+
+| # | Item | Status |
+|---|------|--------|
+| B1 | 2 versi bahasa tiap slide — bilingual EN/ID belum lengkap di semua section | ⏳ Pending |
+| B2 | Halaman komisi belum bisa dibuka — debug & fix | ⏳ Pending |
+| B3 | Kode referral tidak muncul di profil user | ⏳ Pending |
+| B4 | Banyak tombol yang belum bisa dipakai — identifikasi & fix | ⏳ Pending |
+| B5 | Update data produk di VPS | ⏳ Pending |
 
 ---
 
