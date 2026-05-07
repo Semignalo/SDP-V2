@@ -105,13 +105,15 @@ export default function Home() {
             {/* ── 2. Promo Products ────────────────────────────────── */}
             {promoProducts.length > 0 && (
             <section className="py-8 md:py-12 bg-[#faf8f5]">
-                <div className="mb-5 px-4 md:px-8 max-w-6xl mx-auto">
-                    <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--color-accent)] mb-2">
-                        {lang === 'id' ? 'Produk Unggulan' : 'Featured'}
-                    </p>
-                    <h2 className="text-2xl md:text-3xl font-serif text-gray-900">
-                        {lang === 'id' ? 'Pilihan Terbaik' : 'Top Picks'}
+                <div className="mb-8 px-4 md:px-8 max-w-2xl mx-auto text-center">
+                    <h2 className="text-2xl md:text-3xl font-serif text-gray-900 mb-3">
+                        {lang === 'id' ? 'Pilihan Unggulan' : 'New and notable'}
                     </h2>
+                    <p className="text-sm text-gray-500 leading-relaxed">
+                        {lang === 'id'
+                            ? 'Rangkaian formula terbaik kami — masing-masing dirancang untuk memberikan hasil yang terasa dan terlihat nyata.'
+                            : 'A collection of our finest formulations — each designed to deliver results you can feel and see.'}
+                    </p>
                 </div>
                 <>
                     {/* Mobile: horizontal swipe */}

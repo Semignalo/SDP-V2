@@ -62,8 +62,6 @@ export default function Footer() {
                         </h4>
                         <ul className="space-y-3 text-sm text-white/70">
                             <li><Link to="/products" className="hover:text-white transition-colors">{isId ? 'Semua Produk' : 'All Products'}</Link></li>
-                            <li><Link to="/products" className="hover:text-white transition-colors">{isId ? 'Terlaris' : 'Best Sellers'}</Link></li>
-                            <li><Link to="/products" className="hover:text-white transition-colors">{isId ? 'Produk Baru' : 'New Arrivals'}</Link></li>
                         </ul>
                     </div>
 
