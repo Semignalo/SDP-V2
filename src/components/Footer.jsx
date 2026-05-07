@@ -24,7 +24,7 @@ const TokopediaIcon = ({ size = 20 }) => (
 
 const SOCIAL = [
     { label: 'Instagram', icon: Instagram,  href: 'https://instagram.com/STARINC.OFFICIAL' },
-    { label: 'TikTok',    icon: TikTokIcon, href: 'https://tiktok.com/@STARINCOFFICIAL' },
+    { label: 'TikTok',    icon: TikTokIcon, href: 'https://www.tiktok.com/@starinc.official' },
     { label: 'YouTube',   icon: Youtube,    href: '#' },
 ];
 
@@ -48,10 +48,10 @@ export default function Footer() {
                     {/* Brand */}
                     <div className="md:col-span-1 flex flex-col items-center md:items-start gap-4">
                         <img src={settings?.logoUrl || '/logo.png'} alt="Starinc" className="h-12 w-auto brightness-0 invert" />
-                        <p className="text-gray-400 text-xs leading-relaxed text-center md:text-left max-w-[200px]">
+                        <p className="text-white/40 text-xs leading-relaxed text-center md:text-left max-w-[210px]">
                             {isId
-                                ? 'Standar emas kecantikan. Dirancang di Jepang, dibuat untuk Anda.'
-                                : 'The Gold standard of beauty. Designed in Japan, made for you.'}
+                                ? 'Kecantikan holistik dari luar & dalam.    Dibuat untuk Indonesia.'
+                                : 'Holistic beauty, inside & out.    Made for Indonesia.'}
                         </p>
                     </div>
 

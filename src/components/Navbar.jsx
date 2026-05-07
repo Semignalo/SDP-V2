@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, Search, ShoppingBag, User, LogOut } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -10,6 +10,24 @@ import Swal from 'sweetalert2';
 
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
+    const [visible, setVisible] = useState(true);
+    const lastScrollY = useRef(0);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentY = window.scrollY;
+            if (currentY < 10) {
+                setVisible(true);
+            } else if (currentY > lastScrollY.current) {
+                setVisible(false);
+            } else {
+                setVisible(true);
+            }
+            lastScrollY.current = currentY;
+        };
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
     const { settings } = useAppearance();
     const { openCart, getCartCount } = useCart();
     const { currentUser, userRole, logout } = useAuth();
@@ -45,7 +63,10 @@ export default function Navbar() {
 
     return (
         <>
-            <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100 h-14">
+            <nav className={cn(
+                "fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100 h-14 transition-transform duration-300",
+                visible ? "translate-y-0" : "-translate-y-full"
+            )}>
                 <div className="container mx-auto px-4 h-full">
                     <div className="flex items-center justify-between h-full gap-4 relative">
 

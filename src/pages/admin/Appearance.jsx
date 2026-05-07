@@ -32,6 +32,12 @@ const DEFAULT_CONFIG = {
     secondFeaturedDescription1: 'A focus on healthy, radiant skin.',
     secondFeaturedDescription2: 'Crafted with passion.',
     feat2CtaUrl: '/products',
+    skinTypeTag: '',
+    skinTypeTitle: 'Crafted for Every Skin Type',
+    skinTypeDescription: '',
+    skinTypeCtaText: 'Explore Products',
+    skinTypeCtaUrl: '/products',
+    skinTypeImageUrl: '',
     editorialTag: 'Our Signature Collection',
     editorialTitle: 'Crafted for Your Skin',
     editorialDescription: 'Formulated with the finest ingredients, our products are designed to nourish and revitalize your skin with every use.',
@@ -532,6 +538,76 @@ export default function AdminAppearance() {
                                 value={config.secondFeaturedVideoUrl}
                                 onChange={handleFieldChange}
                                 hint="Gunakan format video terkompres dengan framerate 30fps dan resolusi maksimal 1080p (vertikal 4:3)."
+                            />
+                        </div>
+                    </div>
+
+                    {/* Skin Type Split Section */}
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 className="text-lg font-bold text-gray-800 mb-1 flex items-center gap-2">
+                            <Image size={20} className="text-gray-400" />
+                            Skin Type Section
+                        </h3>
+                        <p className="text-xs text-gray-400 mb-6">Section split gambar + teks tentang "Crafted for Every Skin Type". Tampil setelah grid produk.</p>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">Label Kecil (opsional)</label>
+                                <input
+                                    name="skinTypeTag"
+                                    value={config.skinTypeTag || ''}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: FOR ALL SKIN TYPES"
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">Judul</label>
+                                <input
+                                    name="skinTypeTitle"
+                                    value={config.skinTypeTitle || ''}
+                                    onChange={handleChange}
+                                    placeholder="Crafted for Every Skin Type"
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">Deskripsi</label>
+                                <textarea
+                                    name="skinTypeDescription"
+                                    value={config.skinTypeDescription || ''}
+                                    onChange={handleChange}
+                                    rows="4"
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-700">Teks Tombol</label>
+                                    <input
+                                        name="skinTypeCtaText"
+                                        value={config.skinTypeCtaText || ''}
+                                        onChange={handleChange}
+                                        placeholder="Explore Products"
+                                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-700">Link Tombol (URL)</label>
+                                    <input
+                                        name="skinTypeCtaUrl"
+                                        value={config.skinTypeCtaUrl || ''}
+                                        onChange={handleChange}
+                                        placeholder="/products"
+                                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                    />
+                                </div>
+                            </div>
+                            <ImageUploadField
+                                label="Foto (sisi kiri)"
+                                fieldName="skinTypeImageUrl"
+                                value={config.skinTypeImageUrl}
+                                onChange={handleFieldChange}
+                                hint="Rasio bebas, tapi portrait atau square lebih baik. Gambar akan mengisi penuh sisi kiri."
                             />
                         </div>
                     </div>

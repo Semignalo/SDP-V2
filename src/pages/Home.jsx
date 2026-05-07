@@ -7,8 +7,6 @@ import { productApi } from '../api/productApi';
 import { testimonialsApi } from '../api/settingsApi';
 import { ArrowRight, ArrowLeft, Star, Quote } from 'lucide-react';
 
-const PRODUCTS_PER_PAGE = 3;
-
 /* ─────────────────────────────────────────────────────────────
    Home Product Card  (Aesop-style)
 ───────────────────────────────────────────────────────────── */
@@ -21,8 +19,8 @@ function HomeProductCard({ id, title, price, main_image_url, main_image, image, 
     const isOutOfStock = stock !== undefined && stock !== null && stock <= 0;
 
     return (
-        <Link to={`/product/${id}`} className="group flex flex-col">
-            <div className="relative aspect-[3/4] overflow-hidden bg-stone-100 mb-5">
+        <Link to={`/product/${id}`} className="group flex flex-col w-full shrink-0 md:shrink md:w-auto">
+            <div className="relative aspect-square overflow-hidden bg-stone-100 mb-3">
                 {isOutOfStock && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
                         <span className="text-white text-[10px] uppercase tracking-[0.2em]">{outOfStockLabel}</span>
@@ -34,11 +32,11 @@ function HomeProductCard({ id, title, price, main_image_url, main_image, image, 
                     loading="lazy" onError={e => { e.target.src = '/logo.png'; }}
                 />
             </div>
-            <div className="text-center flex-1 flex flex-col px-2">
-                <p className="text-[11px] text-gray-400 mb-1.5 tracking-wide">{category}</p>
-                <h3 className="font-serif text-gray-900 text-base mb-3 leading-snug">{title}</h3>
-                <p className="text-sm text-gray-600 mb-5">{displayPrice}</p>
-                <span className="mt-auto block w-full bg-[#1a1a1a] text-white text-[11px] tracking-[0.15em] uppercase py-3.5 group-hover:bg-[var(--color-accent)] transition-colors duration-300">
+            <div className="text-center flex-1 flex flex-col px-1">
+                <p className="text-[10px] text-gray-400 mb-1 tracking-wide truncate">{category}</p>
+                <h3 className="font-serif text-gray-900 text-sm mb-2 leading-snug line-clamp-2">{title}</h3>
+                <p className="text-xs text-gray-600 mb-3">{displayPrice}</p>
+                <span className="mt-auto block w-full bg-[#1a1a1a] text-white text-[10px] tracking-[0.15em] uppercase py-2.5 group-hover:bg-[var(--color-accent)] transition-colors duration-300">
                     {viewLabel}
                 </span>
             </div>
@@ -55,8 +53,8 @@ export default function Home() {
     const tx                        = t[lang];
 
     const [allProducts, setAllProducts]   = useState([]);
-    const [productPage, setProductPage]   = useState(0);
     const [productsError, setProductsError] = useState(false);
+    const [promoProducts, setPromoProducts] = useState([]);
     const [testimonials, setTestimonials] = useState(null); // null = loading
 
     useEffect(() => {
@@ -64,13 +62,15 @@ export default function Home() {
             .then(r => { setAllProducts(r.data || []); setProductsError(false); })
             .catch(() => setProductsError(true));
 
+        productApi.getProducts({ promo: true, per_page: 20 })
+            .then(r => setPromoProducts(r.data || []))
+            .catch(() => {});
+
         testimonialsApi.getAll()
             .then(data => setTestimonials(data))
             .catch(() => setTestimonials([]));
     }, []);
 
-    const totalPages      = Math.max(1, Math.ceil(allProducts.length / PRODUCTS_PER_PAGE));
-    const visibleProducts = allProducts.slice(productPage * PRODUCTS_PER_PAGE, (productPage + 1) * PRODUCTS_PER_PAGE);
 
     return (
         <div className="flex flex-col w-full overflow-hidden">
@@ -86,11 +86,8 @@ export default function Home() {
                 >
                     <source src={settings?.heroVideoUrl} type="video/mp4" />
                 </video>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                <div className="absolute inset-0 flex flex-col items-center justify-end pb-[12%] px-4 z-10 text-center">
-                    <p className="text-white/60 text-xs italic tracking-widest mb-4">
-                        {settings?.heroTag || tx.heroTag}
-                    </p>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                <div className="absolute inset-0 flex flex-col items-center justify-end pb-[6%] px-4 z-10 text-center">
                     <h1 className="text-4xl sm:text-5xl md:text-[3.5rem] font-serif text-white mb-5 leading-tight max-w-2xl drop-shadow">
                         {settings?.heroTitle || 'True Radiance'}
                     </h1>
@@ -105,65 +102,41 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* ── 2. Products Carousel ─────────────────────────────── */}
-            <section className="py-16 md:py-20 bg-[#faf8f5]">
-                <div className="container mx-auto px-4 max-w-6xl">
-                    <div className="flex items-end justify-between mb-10">
-                        <div>
-                            <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--color-accent)] mb-2">{tx.productsLabel}</p>
-                            <h2 className="text-2xl md:text-3xl font-serif text-gray-900">{tx.productsTitle}</h2>
-                        </div>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setProductPage(p => Math.max(0, p - 1))}
-                                disabled={productPage === 0}
-                                className="w-10 h-10 border border-gray-300 flex items-center justify-center text-gray-600 hover:border-gray-900 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                aria-label="Previous"
-                            ><ArrowLeft size={16} /></button>
-                            <button
-                                onClick={() => setProductPage(p => Math.min(totalPages - 1, p + 1))}
-                                disabled={productPage >= totalPages - 1}
-                                className="w-10 h-10 border border-gray-300 flex items-center justify-center text-gray-600 hover:border-gray-900 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                aria-label="Next"
-                            ><ArrowRight size={16} /></button>
-                        </div>
-                    </div>
-
-                    {productsError ? (
-                        <div className="col-span-3 text-center py-16 text-gray-400 text-sm">
-                            {lang === 'en'
-                                ? 'Unable to load products. Please try again later.'
-                                : 'Produk tidak dapat dimuat. Silakan coba lagi nanti.'}
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 md:gap-10">
-                            {visibleProducts.map(product => (
-                                <HomeProductCard
-                                    key={product.id} {...product}
-                                    viewLabel={tx.viewProduct}
-                                    outOfStockLabel={tx.outOfStock}
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    {totalPages > 1 && (
-                        <div className="flex justify-center gap-2 mt-10">
-                            {Array.from({ length: totalPages }).map((_, i) => (
-                                <button key={i} onClick={() => setProductPage(i)}
-                                    className={`h-1.5 rounded-full transition-all duration-300 ${i === productPage ? 'bg-gray-900 w-6' : 'bg-gray-300 w-1.5'}`}
-                                    aria-label={`Page ${i + 1}`}
-                                />
-                            ))}
-                        </div>
-                    )}
+            {/* ── 2. Promo Products ────────────────────────────────── */}
+            {promoProducts.length > 0 && (
+            <section className="py-8 md:py-12 bg-[#faf8f5]">
+                <div className="mb-5 px-4 md:px-8 max-w-6xl mx-auto">
+                    <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--color-accent)] mb-2">
+                        {lang === 'id' ? 'Produk Unggulan' : 'Featured'}
+                    </p>
+                    <h2 className="text-2xl md:text-3xl font-serif text-gray-900">
+                        {lang === 'id' ? 'Pilihan Terbaik' : 'Top Picks'}
+                    </h2>
                 </div>
+                <>
+                    {/* Mobile: horizontal swipe */}
+                    <div className="flex md:hidden gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory px-4 pb-4"
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                        {promoProducts.map(product => (
+                            <div key={product.id} className="snap-start shrink-0 w-[46vw] max-w-[200px]">
+                                <HomeProductCard {...product} viewLabel={tx.viewProduct} outOfStockLabel={tx.outOfStock} />
+                            </div>
+                        ))}
+                    </div>
+                    {/* Desktop: grid 3 kolom */}
+                    <div className="hidden md:grid grid-cols-3 gap-6 px-8 max-w-6xl mx-auto">
+                        {promoProducts.slice(0, 3).map(product => (
+                            <HomeProductCard key={product.id} {...product} viewLabel={tx.viewProduct} outOfStockLabel={tx.outOfStock} />
+                        ))}
+                    </div>
+                </>
             </section>
+            )}
 
             {/* ── 3. Featured Split #1 ─────────────────────────────── */}
-            <section className="py-16 md:py-24 bg-[#faf8f5]">
+            <section className="py-10 md:py-16 bg-[#faf8f5]">
                 <div className="container mx-auto px-4 max-w-6xl">
-                    <div className="flex flex-col md:flex-row items-center gap-10 lg:gap-20">
+                    <div className="flex flex-col md:flex-row items-center gap-8 lg:gap-14">
                         <div className="w-full md:w-1/2 flex justify-center md:justify-end">
                             <div className="w-full max-w-[400px] aspect-[3/4] bg-stone-100 rounded-sm overflow-hidden relative shadow-sm">
                                 {settings?.goldSerumVideoUrl ? (
@@ -179,13 +152,13 @@ export default function Home() {
                             </div>
                         </div>
                         <div className="w-full md:w-1/2 text-center">
-                            <h2 className="text-2xl md:text-3xl text-[var(--color-accent)] font-serif mb-6 md:mb-8 font-medium">
+                            <h2 className="text-2xl md:text-3xl text-[var(--color-accent)] font-serif mb-4 md:mb-5 font-medium">
                                 {settings?.goldSerumSubtitle || 'Face cleansing balm'}
                             </h2>
-                            <p className="text-gray-700 text-sm md:text-base leading-relaxed mb-6 max-w-[400px] mx-auto">
+                            <p className="text-gray-700 text-sm md:text-base leading-relaxed mb-4 max-w-[400px] mx-auto">
                                 {settings?.goldSerumDescription1 || 'This gentle cleansing balm deeply cleanses and removes even waterproof makeup without irritating or drying out eyes.'}
                             </p>
-                            <p className="text-gray-500 text-sm leading-relaxed mb-10 max-w-[400px] mx-auto">
+                            <p className="text-gray-500 text-sm leading-relaxed mb-6 max-w-[400px] mx-auto">
                                 {settings?.goldSerumDescription2 || 'Fragrance-free, lightly scented with ginger and lemon essential oils.'}
                             </p>
                             <Link to={settings?.feat1CtaUrl || '/products'} className="border border-[var(--color-accent)] text-[var(--color-accent)] px-8 py-3.5 text-xs font-bold tracking-[0.2em] hover:bg-[var(--color-accent)] hover:text-white transition-colors uppercase w-[200px] rounded-sm inline-block text-center">
@@ -196,10 +169,11 @@ export default function Home() {
                 </div>
             </section>
 
+
             {/* ── 4. Featured Split #2 ─────────────────────────────── */}
-            <section className="py-16 md:py-24 bg-[#f0ede8]">
+            <section className="py-10 md:py-16 bg-[#f0ede8]">
                 <div className="container mx-auto px-4 max-w-6xl">
-                    <div className="flex flex-col md:flex-row-reverse items-center gap-10 lg:gap-20">
+                    <div className="flex flex-col md:flex-row-reverse items-center gap-8 lg:gap-14">
                         <div className="w-full md:w-1/2 flex justify-center md:justify-start">
                             <div className="w-full max-w-[400px] aspect-[3/4] bg-stone-50 rounded-sm overflow-hidden relative shadow-sm">
                                 {settings?.secondFeaturedVideoUrl ? (
@@ -215,13 +189,13 @@ export default function Home() {
                             </div>
                         </div>
                         <div className="w-full md:w-1/2 text-center">
-                            <h2 className="text-2xl md:text-3xl text-[var(--color-accent)] font-serif mb-6 md:mb-8 font-medium">
+                            <h2 className="text-2xl md:text-3xl text-[var(--color-accent)] font-serif mb-4 md:mb-5 font-medium">
                                 {settings?.secondFeaturedSubtitle || 'Our Concept'}
                             </h2>
-                            <p className="text-gray-700 text-sm md:text-base leading-relaxed mb-6 max-w-[400px] mx-auto">
+                            <p className="text-gray-700 text-sm md:text-base leading-relaxed mb-4 max-w-[400px] mx-auto">
                                 {settings?.secondFeaturedDescription1 || 'A focus on healthy, radiant skin.'}
                             </p>
-                            <p className="text-gray-500 text-sm leading-relaxed mb-10 max-w-[400px] mx-auto">
+                            <p className="text-gray-500 text-sm leading-relaxed mb-6 max-w-[400px] mx-auto">
                                 {settings?.secondFeaturedDescription2 || 'Crafted with passion.'}
                             </p>
                             <Link to={settings?.feat2CtaUrl || '/products'} className="border border-[var(--color-accent)] text-[var(--color-accent)] px-8 py-3.5 text-xs font-bold tracking-[0.2em] hover:bg-[var(--color-accent)] hover:text-white transition-colors uppercase w-[200px] rounded-sm inline-block text-center">
@@ -232,9 +206,73 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* ── 5. Editorial Image & Text (moved up, before products) */}
-            <section className="flex flex-col md:flex-row min-h-[420px] md:min-h-[520px] bg-stone-50">
-                <div className="w-full md:w-[45%] flex items-center px-8 md:px-16 lg:px-24 py-16 md:py-20">
+            {/* ── 5. Skin Type Split Section ───────────────────────── */}
+            <section className="flex flex-col md:flex-row min-h-[420px] md:min-h-[540px]">
+                <div className="w-full md:w-1/2 h-[300px] md:h-auto overflow-hidden">
+                    {settings?.skinTypeImageUrl ? (
+                        <img src={settings.skinTypeImageUrl} alt={settings?.skinTypeTitle || ''}
+                            className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="w-full h-full bg-stone-200 flex items-center justify-center min-h-[300px]">
+                            <span className="text-stone-400 text-sm">Gambar belum diatur</span>
+                        </div>
+                    )}
+                </div>
+                <div className="w-full md:w-1/2 bg-white flex items-center px-8 md:px-14 lg:px-20 py-12 md:py-16">
+                    <div className="max-w-[480px]">
+                        {settings?.skinTypeTag && (
+                            <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--color-accent)] mb-4">
+                                {settings.skinTypeTag}
+                            </p>
+                        )}
+                        <h2 className="text-3xl md:text-4xl font-serif text-gray-900 mb-6 leading-snug">
+                            {settings?.skinTypeTitle || (lang === 'id' ? 'Cocok untuk Semua Jenis Kulit' : 'Crafted for Every Skin Type')}
+                        </h2>
+                        <p className="text-gray-500 text-sm leading-relaxed mb-8">
+                            {settings?.skinTypeDescription || (lang === 'id'
+                                ? 'Formula kami dirancang untuk semua jenis kulit — normal, kering, berminyak, maupun kombinasi. Setiap produk Starinc hadir dengan bahan aktif pilihan yang bekerja harmonis untuk kulit Anda.'
+                                : 'Our formulas are designed for all skin types — normal, dry, oily, or combination. Each Starinc product contains carefully selected actives that work in harmony with your skin.')}
+                        </p>
+                        <Link to={settings?.skinTypeCtaUrl || '/products'}
+                            className="border border-gray-900 text-gray-900 px-8 py-3.5 text-xs tracking-[0.15em] hover:bg-gray-900 hover:text-white transition-colors uppercase inline-flex items-center gap-2">
+                            {settings?.skinTypeCtaText || (lang === 'id' ? 'Jelajahi Produk' : 'Explore Products')} <ArrowRight size={13} />
+                        </Link>
+                    </div>
+                </div>
+            </section>
+
+            {/* ── 6. Products Scroll ───────────────────────────────── */}
+            <section className="py-8 md:py-12 bg-[#faf8f5]">
+                <div className="mb-5 px-4 md:px-8 max-w-6xl mx-auto">
+                    <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--color-accent)] mb-2">{tx.productsLabel}</p>
+                    <h2 className="text-2xl md:text-3xl font-serif text-gray-900">{tx.productsTitle}</h2>
+                </div>
+                {productsError ? (
+                    <div className="text-center py-16 text-gray-400 text-sm px-4">
+                        {lang === 'en' ? 'Unable to load products.' : 'Produk tidak dapat dimuat.'}
+                    </div>
+                ) : (
+                    <>
+                        <div className="flex md:hidden gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory px-4 pb-4"
+                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            {allProducts.map(product => (
+                                <div key={product.id} className="snap-start shrink-0 w-[46vw] max-w-[200px]">
+                                    <HomeProductCard {...product} viewLabel={tx.viewProduct} outOfStockLabel={tx.outOfStock} />
+                                </div>
+                            ))}
+                        </div>
+                        <div className="hidden md:grid grid-cols-3 gap-6 px-8 max-w-6xl mx-auto">
+                            {allProducts.slice(0, 3).map(product => (
+                                <HomeProductCard key={product.id} {...product} viewLabel={tx.viewProduct} outOfStockLabel={tx.outOfStock} />
+                            ))}
+                        </div>
+                    </>
+                )}
+            </section>
+
+            {/* ── 7. Editorial Image & Text */}
+            <section className="flex flex-col md:flex-row min-h-[360px] md:min-h-[460px] bg-stone-50">
+                <div className="w-full md:w-[45%] flex items-center px-8 md:px-16 lg:px-20 py-10 md:py-14">
                     <div className="max-w-[420px]">
                         {settings?.editorialTag && (
                             <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 mb-4">
@@ -244,7 +282,7 @@ export default function Home() {
                         <h2 className="text-3xl md:text-4xl font-serif text-gray-900 mb-6 leading-snug">
                             {settings?.editorialTitle || 'Crafted for Your Skin'}
                         </h2>
-                        <p className="text-gray-500 text-sm leading-relaxed mb-10">
+                        <p className="text-gray-500 text-sm leading-relaxed mb-6">
                             {settings?.editorialDescription || ''}
                         </p>
                         <Link to={settings?.editorialCtaUrl || '/products'} className="border border-gray-900 text-gray-900 px-8 py-3.5 text-xs tracking-[0.15em] hover:bg-gray-900 hover:text-white transition-colors uppercase inline-flex items-center gap-2">
@@ -268,9 +306,9 @@ export default function Home() {
 
             {/* ── 7. Testimonials ──────────────────────────────────── */}
             {(testimonials === null || testimonials?.length > 0 || tx.testimonials?.length > 0) && (
-            <section className="py-16 md:py-20 bg-white">
+            <section className="py-10 md:py-14 bg-white">
                 <div className="container mx-auto px-4 max-w-6xl">
-                    <div className="text-center mb-12">
+                    <div className="text-center mb-8">
                         <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--color-accent)] mb-3">{tx.testimLabel}</p>
                         <h2 className="text-2xl md:text-3xl font-serif text-gray-900">{tx.testimTitle}</h2>
                         <div className="h-px w-10 bg-[var(--color-accent)] mx-auto mt-5" />
@@ -298,7 +336,7 @@ export default function Home() {
             )}
 
             {/* ── 8. Partnership CTA (moved to bottom, no MLM language) */}
-            <section className="py-20 bg-[#111] relative overflow-hidden">
+            <section className="py-12 bg-[#111] relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[var(--color-accent)]/40 to-transparent" />
                 <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[var(--color-accent)]/40 to-transparent" />
                 <div className="container mx-auto px-4 max-w-3xl text-center relative z-10">
@@ -306,7 +344,7 @@ export default function Home() {
                     <h2 className="text-3xl md:text-4xl font-serif text-white mb-5 leading-snug whitespace-pre-line">
                         {tx.ctaTitle}
                     </h2>
-                    <p className="text-white/50 text-sm leading-relaxed max-w-lg mx-auto mb-10">
+                    <p className="text-white/50 text-sm leading-relaxed max-w-lg mx-auto mb-7">
                         {tx.ctaDesc}
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
