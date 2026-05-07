@@ -3,10 +3,11 @@ const conn = new Client();
 
 const commands = [
     'cd /var/www/sdp-v2 && sudo chown -R STARINC:STARINC starinc-api/storage',
-    'cd /var/www/sdp-v2 && git stash',
-    'cd /var/www/sdp-v2 && git pull origin main',
-    'cd /var/www/sdp-v2 && git stash pop',
-    'cd /var/www/sdp-v2 && npm install && npm run build',
+    // Keep .env out of git pull — exclude it from tracking temporarily
+    'cd /var/www/sdp-v2 && git checkout -- .env 2>/dev/null; git pull origin main',
+    // Restore production .env values after pull
+    `cd /var/www/sdp-v2 && sed -i 's|VITE_API_URL=.*|VITE_API_URL=https://sdp.starincofficial.id/api|' .env && sed -i 's|VITE_STORAGE_URL=.*|VITE_STORAGE_URL=https://sdp.starincofficial.id/storage|' .env`,
+    'cd /var/www/sdp-v2 && npm run build',
     'sudo chown -R www-data:www-data /var/www/sdp-v2/starinc-api/storage',
     'sudo systemctl restart sdp-api',
 ];
