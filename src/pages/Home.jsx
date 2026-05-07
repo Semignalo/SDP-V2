@@ -107,12 +107,12 @@ export default function Home() {
             <section className="py-8 md:py-12 bg-[#faf8f5]">
                 <div className="mb-8 px-4 md:px-8 max-w-2xl mx-auto text-center">
                     <h2 className="text-2xl md:text-3xl font-serif text-gray-900 mb-3">
-                        {lang === 'id' ? 'Pilihan Unggulan' : 'New and notable'}
+                        {lang === 'id' ? 'Pilihan Terkurasi' : 'Curated for You'}
                     </h2>
                     <p className="text-sm text-gray-500 leading-relaxed">
                         {lang === 'id'
-                            ? 'Rangkaian formula terbaik kami — masing-masing dirancang untuk memberikan hasil yang terasa dan terlihat nyata.'
-                            : 'A collection of our finest formulations — each designed to deliver results you can feel and see.'}
+                            ? 'Setiap produk Starinc hadir dari riset mendalam — diformulasikan untuk kulit Indonesia yang sesungguhnya.'
+                            : 'Every Starinc product is born from deep research — formulated for skin that is truly, uniquely Indonesian.'}
                     </p>
                 </div>
                 <>
