@@ -227,7 +227,7 @@ export default function CartDrawer() {
                                 >
                                     <div className="w-20 h-24 flex-shrink-0 bg-gray-100 rounded-sm overflow-hidden">
                                         <img
-                                            src={item.image}
+                                            src={item.main_image_url || item.image}
                                             alt={item.title}
                                             className="w-full h-full object-cover"
                                         />
