@@ -2,6 +2,33 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Communication Style & User Preferences
+
+### Bahasa
+- User berkomunikasi dalam **Bahasa Indonesia**. Selalu balas dalam Bahasa Indonesia kecuali user pakai Bahasa Inggris duluan.
+
+### Gaya Komunikasi User
+- Pesan singkat dan langsung — tidak panjang lebar. Contoh: "oke push ke vps", "masih gak bisa", "pull lagi".
+- Kalau ada masalah, user cukup bilang gejalanya saja tanpa detail teknis. Claude yang harus diagnosa sendiri.
+- "oke" = setuju/lanjutkan. Tidak perlu konfirmasi ulang, langsung kerjakan.
+- User tidak butuh penjelasan panjang — cukup update singkat + hasil akhir.
+
+### Cara Claude Harus Menjawab
+- **Jawaban singkat dan padat.** Jangan jelaskan hal yang sudah obvious dari kode.
+- **Langsung kerjakan** saat user bilang "oke" atau memberi instruksi. Tidak perlu recap atau tanya ulang.
+- **Update singkat saat bekerja** — satu kalimat per langkah penting, bukan narasi panjang.
+- **Jangan tulis ulang apa yang baru dikerjakan** di akhir respons — user bisa lihat sendiri.
+- Kalau ada error/masalah, diagnosa dulu sebelum lapor — jangan dump raw error ke user.
+- Gunakan format list/code block hanya kalau memang perlu, bukan untuk memperindah jawaban.
+
+### Hal yang Perlu Diingat
+- User pakai **Windows 11 laptop baru** — `localhost` resolve ke IPv6 (`::1`). Selalu pakai `127.0.0.1` untuk URL lokal.
+- **`.env.local`** selalu override `.env` di Vite. Kalau ada masalah koneksi frontend, cek `.env.local` dulu.
+- Local database: **MySQL `starinc_db`** (bukan SQLite), mirror dari VPS. Password root kosong.
+- VPS: **IDCloudHost** IP `157.10.161.83`, user SSH `STARINC`.
+
+---
+
 ## Project Overview
 
 SDP-V2 is a full-stack e-commerce and MLM (multi-level marketing) platform. It is a monorepo with a React + Vite frontend at the root and a Laravel 13 API backend in `starinc-api/`.

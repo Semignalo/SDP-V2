@@ -1,8 +1,14 @@
-import { Routes, Route } from 'react-router-dom';
-import { Suspense, lazy } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { Suspense, lazy, useEffect } from 'react';
 import RootLayout from './layouts/RootLayout';
 import AdminLayout from './layouts/AdminLayout';
 import PageLoader from './components/PageLoader';
+
+function ScrollToTop() {
+    const { pathname } = useLocation();
+    useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+    return null;
+}
 
 // Lazy load all pages
 const Home = lazy(() => import('./pages/Home'));
@@ -39,6 +45,7 @@ const AdminTestimonials = lazy(() => import('./pages/admin/Testimonials'));
 function App() {
   return (
     <Suspense fallback={<PageLoader />}>
+      <ScrollToTop />
       <Routes>
         {/* Public Routes */}
         <Route element={<RootLayout />}>

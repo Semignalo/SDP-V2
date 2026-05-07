@@ -81,7 +81,18 @@
       "Bash(git fetch *)",
       "Bash(git merge *)",
       "Bash(git stash *)",
-      "Bash(xargs cat *)"
+      "Bash(xargs cat *)",
+      "Bash(ssh-keyscan -H 157.10.161.83)",
+      "Bash(node _deploy.cjs)",
+      "Bash(npm uninstall *)",
+      "Bash(/c/laragon/bin/mysql/mysql-8.0.30-winx64/bin/mysql --version)",
+      "Bash(/c/laragon/bin/mysql/mysql-8.4.3-winx64/bin/mysql --version)",
+      "Bash(/c/laragon/bin/mysql/mysql-8.4.3-winx64/bin/mysql -u root -e \"SHOW DATABASES;\")",
+      "Bash(/c/laragon/bin/mysql/mysql-8.4.3-winx64/bin/mysql -u root -e \"CREATE DATABASE IF NOT EXISTS starinc_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\")",
+      "Bash(/c/laragon/bin/mysql/mysql-8.4.3-winx64/bin/mysql -u root starinc_db)",
+      "Bash(/c/laragon/bin/mysql/mysql-8.4.3-winx64/bin/mysql -u root starinc_db -e \"SHOW TABLES;\")",
+      "Bash(node _pull_storage.cjs)",
+      "Read(//c/Users/stari/.claude/projects/c--laragon-www-SDP-V2/memory/**)"
     ]
   }
 }

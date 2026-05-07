@@ -1175,7 +1175,7 @@ Example:
 
 ---
 
-**Last Updated:** 2026-05-06 — Email Resend, Admin Delete User, RajaOngkir fix, Midtrans VPS, throttle  
+**Last Updated:** 2026-05-07 — Bug fixes B1-B4, VPS API URL fix, MySQL mirror VPS→local, storage pull, local dev setup  
 **Next Review:** Phase 3.2 completion (queue worker, cron, SSL, SMTP)
 
 ---
@@ -1634,7 +1634,7 @@ Satu langkah sebelum email bisa terkirim:
   [x] P0.3 — Konfigurasi email via Resend API (domain starincofficial.id verified, lokal + VPS) ✅
 
 Untuk production:
-  [ ] P0.2 — Migrasi SQLite → MySQL
+  [x] P0.2 — Migrasi SQLite → MySQL ✅ (local sekarang pakai MySQL starinc_db mirror dari VPS)
   [ ] P0.1 — Daftarkan tier:check-downgrades di console.php
   [ ] Phase 3.2+ — VPS Setup & Deployment
 
@@ -1643,4 +1643,92 @@ Fitur bisnis (backlog):
   [ ] P1.1 — Wallet/Ledger komisi
   [ ] P1.4 — Rate limiting login/register lebih ketat
 ```
+
+---
+
+# 🔧 DEVELOPMENT SESSION — 2026-05-07
+
+**Type:** Bug Fix + VPS Fix + Local Dev Setup  
+**Status:** ✅ ALL APPLIED
+
+## Session 2026-05-07 — Bug Fixes B1-B4, VPS API URL, MySQL Mirror, Storage Pull
+
+### Yang Dikerjakan — Bug Fixes (dari Bug List 2026-05-06)
+
+- [x] **B1 — Bilingual belum lengkap di Home.jsx:**
+  - Tambah locale keys `feat1Btn`, `feat2Btn`, `editorialBtn` di `src/locales/home.js` (EN + ID)
+  - Ganti hardcoded `lang === 'en' ? 'TRY NOW' : 'COBA SEKARANG'` → pakai `tx.feat1Btn`
+
+- [x] **B2 — Halaman komisi error:**
+  - `starinc-api/app/Http/Controllers/Api/CommissionController.php` — hapus wrapper `['data' => $commissions]`
+  - Laravel paginator sudah punya key `data` sendiri — double-wrapping bikin frontend tidak bisa parse
+
+- [x] **B3 — Kode referral tidak muncul di profil:**
+  - `src/api/networkApi.js` — `getReferralInfo()` return `response.data.data` (bukan `response.data`)
+  - NetworkController wrap response dalam key `data`, sehingga perlu unwrap satu level lebih
+
+- [x] **B4 — Tombol di Home.jsx tidak berfungsi + Navbar starcenter tidak muncul:**
+  - `src/pages/Home.jsx` — 4 `<button>` dead (hero, feat1, feat2, editorial) diganti `<Link to="/products">`
+  - `src/components/Navbar.jsx` — 2 kondisi `userRole === 'center'` diubah ke `'starcenter'` (navLinks array + dropdown)
+
+### Yang Dikerjakan — VPS API URL Fix
+
+- [x] **VPS backend tidak terhubung ke frontend:**
+  - Root cause: `.env` di VPS masih pakai `VITE_API_URL=http://192.168.1.196:8000/api` (LAN IP lama)
+  - Fix: update via `sed -i` → `VITE_API_URL=http://157.10.161.83/api`, lalu rebuild `npm run build` di VPS
+  - Deploy ulang frontend ke `/var/www/sdp-v2/`
+
+### Yang Dikerjakan — MySQL Mirror VPS → Local
+
+- [x] **Dump database VPS ke local:**
+  - Tulis `_deploy.cjs` — Node.js script pakai `ssh2` untuk SSH ke VPS, jalankan `mysqldump`, simpan ke `_vps_dump.sql`
+  - Dump 59 KB berhasil: 23 tabel, 10 users, 7 produk, semua order + commission
+
+- [x] **Import ke local MySQL:**
+  - `CREATE DATABASE starinc_db` di Laragon MySQL
+  - Import dump: `mysql -u root starinc_db < _vps_dump.sql` — semua 23 tabel terbuat
+  - Update `starinc-api/.env`: `DB_CONNECTION=mysql`, `DB_DATABASE=starinc_db`, `DB_HOST=127.0.0.1`
+  - Verifikasi: `php artisan migrate:status` — semua 23 migrasi `Ran` ✅
+
+- [x] **Pull semua file storage dari VPS:**
+  - Tulis `_pull_storage.cjs` — Node.js SFTP script download semua file dari `/var/www/sdp-v2/starinc-api/storage/app/public/`
+  - 7 file didownload (video + gambar produk), 1 sudah ada
+  - Local storage sekarang sync dengan VPS
+
+### Yang Dikerjakan — Local Dev Setup (Laptop Baru)
+
+- [x] **Frontend tidak bisa konek ke backend di laptop baru:**
+  - Root cause: Windows 11 resolve `localhost` ke IPv6 (`::1`), tapi `php artisan serve` listen di IPv4 (`127.0.0.1`)
+  - Root cause kedua: `.env.local` override `.env` dan masih pakai IP lama `192.168.1.70`
+  - Fix: update `VITE_API_URL` dan `VITE_STORAGE_URL` di `.env.local` → `http://127.0.0.1:8000/...`
+  - `.env` (frontend) juga diupdate ke `127.0.0.1` sebagai fallback
+
+### Files Changed
+
+- `src/locales/home.js` *(updated — feat1Btn/feat2Btn/editorialBtn keys)*
+- `src/pages/Home.jsx` *(4 dead buttons → Link to="/products")*
+- `src/components/Navbar.jsx` *(userRole 'center' → 'starcenter' di 2 tempat)*
+- `src/api/networkApi.js` *(getReferralInfo: response.data → response.data.data)*
+- `starinc-api/app/Http/Controllers/Api/CommissionController.php` *(hapus double-wrap paginator)*
+- `starinc-api/.env` *(DB_CONNECTION mysql, DB_DATABASE starinc_db)*
+- `.env` *(VITE_API_URL → 127.0.0.1)*
+- `.env.local` *(VITE_API_URL → 127.0.0.1, ganti IP lama 192.168.1.70)*
+- `_deploy.cjs` *(new — VPS MySQL dump script, temp file)*
+- `_pull_storage.cjs` *(new — VPS SFTP storage pull script, temp file)*
+
+### State Local Dev Sekarang
+
+```
+Database:   MySQL starinc_db (mirror VPS) — 10 users, 7 produk, semua data ✅
+Storage:    starinc-api/storage/app/public/ sync dengan VPS ✅
+Backend:    php artisan serve → 127.0.0.1:8000 ✅
+Frontend:   npm run dev → localhost:5173, VITE_API_URL=http://127.0.0.1:8000/api ✅
+Login:      admin@starinc.id / password ✅
+```
+
+### Catatan Penting — Laptop Baru (Windows 11)
+
+> Kalau ganti jaringan atau pindah laptop, **edit `.env.local`** (bukan `.env`).  
+> `.env.local` di-ignore oleh git dan selalu override `.env` di Vite.  
+> Windows 11: gunakan `127.0.0.1` bukan `localhost` karena resolve ke IPv6.
 

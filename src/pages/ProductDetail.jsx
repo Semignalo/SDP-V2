@@ -220,16 +220,6 @@ export default function ProductDetail() {
                         >
                             {isOutOfStock ? 'Stok Habis' : 'Add to Cart'}
                         </button>
-                        <button
-                            disabled={isOutOfStock}
-                            className={`w-full py-4 font-bold text-sm tracking-widest transition-colors uppercase shadow-sm ${
-                                isOutOfStock
-                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                    : 'bg-[#1a3a5c] text-white hover:bg-[#122a44]'
-                            }`}
-                        >
-                            Buy it Now
-                        </button>
                     </div>
 
                     {/* Trust Badges */}

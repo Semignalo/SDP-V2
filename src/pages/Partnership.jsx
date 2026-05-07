@@ -127,12 +127,16 @@ function FaqItem({ q, a }) {
     const [open, setOpen] = useState(false);
     return (
         <div className="border-b border-white/10 last:border-0">
-            <button onClick={() => setOpen(!open)} className="w-full flex items-start justify-between py-5 text-left gap-4 group">
-                <span className={`text-sm font-medium leading-relaxed transition-colors ${open ? 'text-[var(--color-accent)]' : 'text-white/80 group-hover:text-white'}`}>{q}</span>
-                <ChevronDown size={16} className={`shrink-0 mt-0.5 text-white/40 transition-transform duration-300 ${open ? 'rotate-180 text-[var(--color-accent)]' : ''}`} />
+            <button
+                onClick={() => setOpen(!open)}
+                className="w-full flex items-start justify-between py-5 text-left gap-4 group outline-none"
+                style={{ background: 'none' }}
+            >
+                <span className={`text-sm font-medium leading-relaxed transition-colors ${open ? 'text-white' : 'text-white/70 group-hover:text-white'}`}>{q}</span>
+                <ChevronDown size={16} className={`shrink-0 mt-0.5 transition-transform duration-300 ${open ? 'rotate-180 text-white' : 'text-white/40'}`} />
             </button>
             <div className={`overflow-hidden transition-all duration-300 ${open ? 'max-h-48 pb-5' : 'max-h-0'}`}>
-                <p className="text-sm text-white/50 leading-relaxed">{a}</p>
+                <p className="text-sm text-white/70 leading-relaxed">{a}</p>
             </div>
         </div>
     );
@@ -159,10 +163,6 @@ export default function Partnership() {
                 <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[var(--color-accent)]/50 to-transparent" />
 
                 <div className="relative z-10 container mx-auto px-6 py-24 max-w-4xl text-center">
-                    <div className="inline-flex items-center gap-2 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 rounded-full px-4 py-1.5 mb-8">
-                        <Star size={12} className="text-[var(--color-accent)] fill-[var(--color-accent)]" />
-                        <span className="text-[11px] uppercase tracking-[0.25em] text-[var(--color-accent)] font-semibold">{tx.badge}</span>
-                    </div>
                     <h1 className="text-4xl md:text-6xl font-serif text-white leading-tight mb-6 whitespace-pre-line">
                         {tx.heroTitle}
                     </h1>
@@ -172,26 +172,20 @@ export default function Partnership() {
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                         <Link
                             to="/daftar-center"
-                            className="inline-flex items-center justify-center gap-2 bg-[var(--color-accent)] text-white px-8 py-4 text-xs font-bold tracking-widest uppercase hover:bg-[var(--color-accent-dark)] transition-colors"
+                            className="inline-flex items-center justify-center gap-2 bg-white text-gray-900 px-8 py-4 text-xs font-bold tracking-widest uppercase hover:bg-gray-100 transition-colors"
                         >
                             {tx.heroCta1} <ArrowRight size={14} />
                         </Link>
-                        <a
-                            href="#cara-bergabung"
-                            className="inline-flex items-center justify-center gap-2 border border-white/25 text-white/80 px-8 py-4 text-xs font-bold tracking-widest uppercase hover:border-white/60 hover:text-white transition-colors"
-                        >
-                            {tx.heroCta2}
-                        </a>
                     </div>
                 </div>
 
                 {/* Stats bar */}
-                <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-white/5 backdrop-blur-sm">
+                <div className="absolute bottom-0 left-0 right-0 border-t border-white/20 bg-white/10 backdrop-blur-sm">
                     <div className="container mx-auto px-6 py-5 grid grid-cols-3 gap-4 max-w-2xl text-center">
                         {tx.stats.map((s, i) => (
                             <div key={i}>
-                                <p className="text-xl font-serif text-[var(--color-accent)]">{s.val}</p>
-                                <p className="text-[10px] uppercase tracking-widest text-white/40 mt-0.5">{s.label}</p>
+                                <p className="text-xl font-serif text-white">{s.val}</p>
+                                <p className="text-[10px] uppercase tracking-widest text-white/80 mt-0.5">{s.label}</p>
                             </div>
                         ))}
                     </div>
@@ -325,7 +319,7 @@ export default function Partnership() {
                             {tx.ctaBtn1} <ArrowRight size={14} />
                         </Link>
                         <a
-                            href="https://wa.me/6281234567890"
+                            href="https://wa.me/62811253599"
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex items-center justify-center gap-2 border border-gray-300 text-gray-700 px-8 py-4 text-xs font-bold tracking-widest uppercase hover:border-gray-900 hover:text-gray-900 transition-colors"

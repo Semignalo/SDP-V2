@@ -22,17 +22,21 @@ const DEFAULT_CONFIG = {
     primaryColor: '#1A1A1A',
     accentColor: '#C5A059',
     goldSerumVideoUrl: '',
+    heroCtaUrl: '/products',
     goldSerumSubtitle: 'Face cleansing balm',
     goldSerumDescription1: 'This gentle cleansing balm deeply cleanses and removes even waterproof makeup without irritating or drying out eyes.',
     goldSerumDescription2: 'Fragrance-free, lightly scented with ginger and lemon essential oils.',
+    feat1CtaUrl: '/products',
     secondFeaturedVideoUrl: '',
     secondFeaturedSubtitle: 'Our Concept',
     secondFeaturedDescription1: 'A focus on healthy, radiant skin.',
     secondFeaturedDescription2: 'Crafted with passion.',
+    feat2CtaUrl: '/products',
     editorialTag: 'Our Signature Collection',
     editorialTitle: 'Crafted for Your Skin',
     editorialDescription: 'Formulated with the finest ingredients, our products are designed to nourish and revitalize your skin with every use.',
     editorialCtaText: 'Browse Collection',
+    editorialCtaUrl: '/products',
     editorialImageUrl: ''
 };
 
@@ -320,6 +324,18 @@ export default function AdminAppearance() {
                                 </div>
                             </div>
 
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">Link Tombol Hero (URL tujuan)</label>
+                                <input
+                                    name="heroCtaUrl"
+                                    value={config.heroCtaUrl || '/products'}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: /products atau /product/5"
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-mono text-xs"
+                                />
+                                <p className="text-xs text-gray-400">Gunakan path internal seperti /products atau /product/5</p>
+                            </div>
+
                             {/* Hero Video Upload */}
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-gray-700">
@@ -443,6 +459,16 @@ export default function AdminAppearance() {
                                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none"
                                 />
                             </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">Link Tombol CTA (URL tujuan)</label>
+                                <input
+                                    name="feat1CtaUrl"
+                                    value={config.feat1CtaUrl || '/products'}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: /products atau /product/5"
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-mono text-xs"
+                                />
+                            </div>
                             <VideoUploadField
                                 label="Video URL (Format MP4/WebM Terkompres)"
                                 fieldName="goldSerumVideoUrl"
@@ -490,6 +516,16 @@ export default function AdminAppearance() {
                                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none"
                                 />
                             </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">Link Tombol CTA (URL tujuan)</label>
+                                <input
+                                    name="feat2CtaUrl"
+                                    value={config.feat2CtaUrl || '/products'}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: /products atau /product/5"
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-mono text-xs"
+                                />
+                            </div>
                             <VideoUploadField
                                 label="Video URL (Format MP4/WebM Terkompres)"
                                 fieldName="secondFeaturedVideoUrl"
@@ -530,6 +566,16 @@ export default function AdminAppearance() {
                                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                                     />
                                 </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">Link Tombol CTA (URL tujuan)</label>
+                                <input
+                                    name="editorialCtaUrl"
+                                    value={config.editorialCtaUrl || '/products'}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: /products atau /product/5"
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-mono text-xs"
+                                />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-gray-700">Judul Utama</label>

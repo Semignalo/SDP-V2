@@ -32,12 +32,11 @@ export default function Navbar() {
     };
 
     const navLinks = [
-        { name: lang === 'id' ? 'Beranda' : 'Home', path: '/' },
         { name: 'Catalog', path: '/products' },
         { name: lang === 'id' ? 'Konsep Kami' : 'Our concept', path: '/about' },
         { name: 'FAQ', path: '/faq' },
+        { name: lang === 'id' ? 'Become Center' : 'Become Center', path: '/partnership' },
         ...(userRole === 'starcenter' ? [{ name: 'Center Shop', path: '/center' }] : []),
-        ...(!currentUser ? [{ name: lang === 'id' ? 'Daftar Center' : 'Become Center', path: '/daftar-center' }] : []),
     ];
 
     const firstName = currentUser?.name

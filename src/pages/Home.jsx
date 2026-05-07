@@ -5,7 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { t } from '../locales/home';
 import { productApi } from '../api/productApi';
 import { testimonialsApi } from '../api/settingsApi';
-import { ArrowRight, ArrowLeft, Star, Leaf, Heart, ShieldCheck, Award, Quote } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Star, Quote } from 'lucide-react';
 
 const PRODUCTS_PER_PAGE = 3;
 
@@ -69,13 +69,6 @@ export default function Home() {
             .catch(() => setTestimonials([]));
     }, []);
 
-    const BRAND_VALUES = [
-        { icon: Leaf,        ...tx.natural },
-        { icon: Heart,       ...tx.cruelty },
-        { icon: ShieldCheck, ...tx.halal   },
-        { icon: Award,       ...tx.derm    },
-    ];
-
     const totalPages      = Math.max(1, Math.ceil(allProducts.length / PRODUCTS_PER_PAGE));
     const visibleProducts = allProducts.slice(productPage * PRODUCTS_PER_PAGE, (productPage + 1) * PRODUCTS_PER_PAGE);
 
@@ -106,136 +99,13 @@ export default function Home() {
                             ? 'Discover the new Gold Standard for your skin.'
                             : 'Temukan standar baru keemasan untuk kulitmu.')}
                     </p>
-                    <Link to="/products" className="border border-white/80 text-white px-10 py-3.5 text-xs tracking-[0.2em] hover:bg-white hover:text-gray-900 transition-colors duration-300 uppercase flex items-center gap-3">
+                    <Link to={settings?.heroCtaUrl || '/products'} className="border border-white/80 text-white px-10 py-3.5 text-xs tracking-[0.2em] hover:bg-white hover:text-gray-900 transition-colors duration-300 uppercase flex items-center gap-3">
                         {tx.heroBtn} <ArrowRight size={13} />
                     </Link>
                 </div>
             </section>
 
-            {/* ── 2. Brand Values ──────────────────────────────────── */}
-            <section className="py-14 bg-[#1a1a1a]">
-                <div className="container mx-auto px-4 max-w-5xl">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                        {BRAND_VALUES.map(({ icon: Icon, title, desc }) => (
-                            <div key={title} className="flex flex-col items-center text-center gap-3">
-                                <div className="w-11 h-11 rounded-full border border-[var(--color-accent)]/40 flex items-center justify-center mb-1">
-                                    <Icon size={18} className="text-[var(--color-accent)]" strokeWidth={1.5} />
-                                </div>
-                                <h3 className="font-serif text-white text-sm">{title}</h3>
-                                <p className="text-white/40 text-xs leading-relaxed">{desc}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ── 3. Featured Split #1 ─────────────────────────────── */}
-            <section className="py-16 md:py-24 bg-[#faf8f5]">
-                <div className="container mx-auto px-4 max-w-6xl">
-                    <div className="flex flex-col md:flex-row items-center gap-10 lg:gap-20">
-                        <div className="w-full md:w-1/2 flex justify-center md:justify-end">
-                            <div className="w-full max-w-[400px] aspect-[3/4] bg-stone-100 rounded-sm overflow-hidden relative shadow-sm">
-                                {settings?.goldSerumVideoUrl ? (
-                                    <video autoPlay loop muted playsInline preload="none"
-                                        className="w-full h-full object-cover pointer-events-none"
-                                        src={settings.goldSerumVideoUrl} />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-gray-400 bg-stone-100">
-                                        <div className="animate-pulse bg-stone-200 w-full h-full absolute inset-0" />
-                                        <span className="relative z-10 text-sm">Video belum diatur</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div className="w-full md:w-1/2 text-center">
-                            <h2 className="text-2xl md:text-3xl text-[var(--color-accent)] font-serif mb-6 md:mb-8 font-medium">
-                                {settings?.goldSerumSubtitle || 'Face cleansing balm'}
-                            </h2>
-                            <p className="text-gray-700 text-sm md:text-base leading-relaxed mb-6 max-w-[400px] mx-auto">
-                                {settings?.goldSerumDescription1 || 'This gentle cleansing balm deeply cleanses and removes even waterproof makeup without irritating or drying out eyes.'}
-                            </p>
-                            <p className="text-gray-500 text-sm leading-relaxed mb-10 max-w-[400px] mx-auto">
-                                {settings?.goldSerumDescription2 || 'Fragrance-free, lightly scented with ginger and lemon essential oils.'}
-                            </p>
-                            <Link to="/products" className="border border-[var(--color-accent)] text-[var(--color-accent)] px-8 py-3.5 text-xs font-bold tracking-[0.2em] hover:bg-[var(--color-accent)] hover:text-white transition-colors uppercase w-[200px] rounded-sm inline-block text-center">
-                                {tx.feat1Btn} &rarr;
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ── 4. Featured Split #2 ─────────────────────────────── */}
-            <section className="py-16 md:py-24 bg-[#f0ede8]">
-                <div className="container mx-auto px-4 max-w-6xl">
-                    <div className="flex flex-col md:flex-row-reverse items-center gap-10 lg:gap-20">
-                        <div className="w-full md:w-1/2 flex justify-center md:justify-start">
-                            <div className="w-full max-w-[400px] aspect-[3/4] bg-stone-50 rounded-sm overflow-hidden relative shadow-sm">
-                                {settings?.secondFeaturedVideoUrl ? (
-                                    <video autoPlay loop muted playsInline preload="none"
-                                        className="w-full h-full object-cover pointer-events-none"
-                                        src={settings.secondFeaturedVideoUrl} />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-gray-400 bg-stone-100">
-                                        <div className="animate-pulse bg-stone-200 w-full h-full absolute inset-0" />
-                                        <span className="relative z-10 text-sm">Video belum diatur</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div className="w-full md:w-1/2 text-center">
-                            <h2 className="text-2xl md:text-3xl text-[var(--color-accent)] font-serif mb-6 md:mb-8 font-medium">
-                                {settings?.secondFeaturedSubtitle || 'Our Concept'}
-                            </h2>
-                            <p className="text-gray-700 text-sm md:text-base leading-relaxed mb-6 max-w-[400px] mx-auto">
-                                {settings?.secondFeaturedDescription1 || 'A focus on healthy, radiant skin.'}
-                            </p>
-                            <p className="text-gray-500 text-sm leading-relaxed mb-10 max-w-[400px] mx-auto">
-                                {settings?.secondFeaturedDescription2 || 'Crafted with passion.'}
-                            </p>
-                            <Link to="/products" className="border border-[var(--color-accent)] text-[var(--color-accent)] px-8 py-3.5 text-xs font-bold tracking-[0.2em] hover:bg-[var(--color-accent)] hover:text-white transition-colors uppercase w-[200px] rounded-sm inline-block text-center">
-                                {tx.feat2Btn} &rarr;
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ── 5. Editorial Image & Text (moved up, before products) */}
-            <section className="flex flex-col md:flex-row min-h-[420px] md:min-h-[520px] bg-stone-50">
-                <div className="w-full md:w-[45%] flex items-center px-8 md:px-16 lg:px-24 py-16 md:py-20">
-                    <div className="max-w-[420px]">
-                        {settings?.editorialTag && (
-                            <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 mb-4">
-                                {settings.editorialTag}
-                            </p>
-                        )}
-                        <h2 className="text-3xl md:text-4xl font-serif text-gray-900 mb-6 leading-snug">
-                            {settings?.editorialTitle || 'Crafted for Your Skin'}
-                        </h2>
-                        <p className="text-gray-500 text-sm leading-relaxed mb-10">
-                            {settings?.editorialDescription || ''}
-                        </p>
-                        <Link to="/products" className="border border-gray-900 text-gray-900 px-8 py-3.5 text-xs tracking-[0.15em] hover:bg-gray-900 hover:text-white transition-colors uppercase inline-flex items-center gap-2">
-                            {settings?.editorialCtaText || tx.editorialBtn} <ArrowRight size={14} />
-                        </Link>
-                    </div>
-                </div>
-                <div className="w-full md:w-[55%] h-[300px] md:h-auto overflow-hidden">
-                    {settings?.editorialImageUrl ? (
-                        <img src={settings.editorialImageUrl} alt={settings?.editorialTitle || ''}
-                            className="w-full h-full object-cover" />
-                    ) : (
-                        <div className="w-full h-full bg-stone-200 flex items-center justify-center min-h-[300px]">
-                            <span className="text-stone-400 text-sm">
-                                {lang === 'en' ? 'Image not set' : 'Gambar belum diatur'}
-                            </span>
-                        </div>
-                    )}
-                </div>
-            </section>
-
-            {/* ── 6. Products Carousel ─────────────────────────────── */}
+            {/* ── 2. Products Carousel ─────────────────────────────── */}
             <section className="py-16 md:py-20 bg-[#faf8f5]">
                 <div className="container mx-auto px-4 max-w-6xl">
                     <div className="flex items-end justify-between mb-10">
@@ -285,6 +155,112 @@ export default function Home() {
                                     aria-label={`Page ${i + 1}`}
                                 />
                             ))}
+                        </div>
+                    )}
+                </div>
+            </section>
+
+            {/* ── 3. Featured Split #1 ─────────────────────────────── */}
+            <section className="py-16 md:py-24 bg-[#faf8f5]">
+                <div className="container mx-auto px-4 max-w-6xl">
+                    <div className="flex flex-col md:flex-row items-center gap-10 lg:gap-20">
+                        <div className="w-full md:w-1/2 flex justify-center md:justify-end">
+                            <div className="w-full max-w-[400px] aspect-[3/4] bg-stone-100 rounded-sm overflow-hidden relative shadow-sm">
+                                {settings?.goldSerumVideoUrl ? (
+                                    <video autoPlay loop muted playsInline preload="none"
+                                        className="w-full h-full object-cover pointer-events-none"
+                                        src={settings.goldSerumVideoUrl} />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-gray-400 bg-stone-100">
+                                        <div className="animate-pulse bg-stone-200 w-full h-full absolute inset-0" />
+                                        <span className="relative z-10 text-sm">Video belum diatur</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="w-full md:w-1/2 text-center">
+                            <h2 className="text-2xl md:text-3xl text-[var(--color-accent)] font-serif mb-6 md:mb-8 font-medium">
+                                {settings?.goldSerumSubtitle || 'Face cleansing balm'}
+                            </h2>
+                            <p className="text-gray-700 text-sm md:text-base leading-relaxed mb-6 max-w-[400px] mx-auto">
+                                {settings?.goldSerumDescription1 || 'This gentle cleansing balm deeply cleanses and removes even waterproof makeup without irritating or drying out eyes.'}
+                            </p>
+                            <p className="text-gray-500 text-sm leading-relaxed mb-10 max-w-[400px] mx-auto">
+                                {settings?.goldSerumDescription2 || 'Fragrance-free, lightly scented with ginger and lemon essential oils.'}
+                            </p>
+                            <Link to={settings?.feat1CtaUrl || '/products'} className="border border-[var(--color-accent)] text-[var(--color-accent)] px-8 py-3.5 text-xs font-bold tracking-[0.2em] hover:bg-[var(--color-accent)] hover:text-white transition-colors uppercase w-[200px] rounded-sm inline-block text-center">
+                                {tx.feat1Btn} &rarr;
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ── 4. Featured Split #2 ─────────────────────────────── */}
+            <section className="py-16 md:py-24 bg-[#f0ede8]">
+                <div className="container mx-auto px-4 max-w-6xl">
+                    <div className="flex flex-col md:flex-row-reverse items-center gap-10 lg:gap-20">
+                        <div className="w-full md:w-1/2 flex justify-center md:justify-start">
+                            <div className="w-full max-w-[400px] aspect-[3/4] bg-stone-50 rounded-sm overflow-hidden relative shadow-sm">
+                                {settings?.secondFeaturedVideoUrl ? (
+                                    <video autoPlay loop muted playsInline preload="none"
+                                        className="w-full h-full object-cover pointer-events-none"
+                                        src={settings.secondFeaturedVideoUrl} />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-gray-400 bg-stone-100">
+                                        <div className="animate-pulse bg-stone-200 w-full h-full absolute inset-0" />
+                                        <span className="relative z-10 text-sm">Video belum diatur</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="w-full md:w-1/2 text-center">
+                            <h2 className="text-2xl md:text-3xl text-[var(--color-accent)] font-serif mb-6 md:mb-8 font-medium">
+                                {settings?.secondFeaturedSubtitle || 'Our Concept'}
+                            </h2>
+                            <p className="text-gray-700 text-sm md:text-base leading-relaxed mb-6 max-w-[400px] mx-auto">
+                                {settings?.secondFeaturedDescription1 || 'A focus on healthy, radiant skin.'}
+                            </p>
+                            <p className="text-gray-500 text-sm leading-relaxed mb-10 max-w-[400px] mx-auto">
+                                {settings?.secondFeaturedDescription2 || 'Crafted with passion.'}
+                            </p>
+                            <Link to={settings?.feat2CtaUrl || '/products'} className="border border-[var(--color-accent)] text-[var(--color-accent)] px-8 py-3.5 text-xs font-bold tracking-[0.2em] hover:bg-[var(--color-accent)] hover:text-white transition-colors uppercase w-[200px] rounded-sm inline-block text-center">
+                                {tx.feat2Btn} &rarr;
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ── 5. Editorial Image & Text (moved up, before products) */}
+            <section className="flex flex-col md:flex-row min-h-[420px] md:min-h-[520px] bg-stone-50">
+                <div className="w-full md:w-[45%] flex items-center px-8 md:px-16 lg:px-24 py-16 md:py-20">
+                    <div className="max-w-[420px]">
+                        {settings?.editorialTag && (
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 mb-4">
+                                {settings.editorialTag}
+                            </p>
+                        )}
+                        <h2 className="text-3xl md:text-4xl font-serif text-gray-900 mb-6 leading-snug">
+                            {settings?.editorialTitle || 'Crafted for Your Skin'}
+                        </h2>
+                        <p className="text-gray-500 text-sm leading-relaxed mb-10">
+                            {settings?.editorialDescription || ''}
+                        </p>
+                        <Link to={settings?.editorialCtaUrl || '/products'} className="border border-gray-900 text-gray-900 px-8 py-3.5 text-xs tracking-[0.15em] hover:bg-gray-900 hover:text-white transition-colors uppercase inline-flex items-center gap-2">
+                            {settings?.editorialCtaText || tx.editorialBtn} <ArrowRight size={14} />
+                        </Link>
+                    </div>
+                </div>
+                <div className="w-full md:w-[55%] h-[300px] md:h-auto overflow-hidden">
+                    {settings?.editorialImageUrl ? (
+                        <img src={settings.editorialImageUrl} alt={settings?.editorialTitle || ''}
+                            className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="w-full h-full bg-stone-200 flex items-center justify-center min-h-[300px]">
+                            <span className="text-stone-400 text-sm">
+                                {lang === 'en' ? 'Image not set' : 'Gambar belum diatur'}
+                            </span>
                         </div>
                     )}
                 </div>

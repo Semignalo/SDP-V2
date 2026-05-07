@@ -5,18 +5,20 @@ import { AtSign, Lock, User, LogIn, UserPlus, Eye, EyeOff, CheckCircle, XCircle,
 import Swal from 'sweetalert2';
 import { getErrorMessage } from '../api/client';
 import { authApi } from '../api/authApi';
+import { useLanguage } from '../contexts/LanguageContext';
+import { t } from '../locales/login';
 
-function getPasswordStrength(pwd) {
+function getPasswordStrength(pwd, tx) {
     if (!pwd) return null;
     let score = 0;
     if (pwd.length >= 8) score++;
     if (/[A-Z]/.test(pwd)) score++;
     if (/[0-9]/.test(pwd)) score++;
     if (/[^A-Za-z0-9]/.test(pwd)) score++;
-    if (score <= 1) return { label: 'Lemah', color: 'bg-red-400', width: '25%', textColor: 'text-red-600' };
-    if (score === 2) return { label: 'Sedang', color: 'bg-yellow-400', width: '50%', textColor: 'text-yellow-600' };
-    if (score === 3) return { label: 'Kuat', color: 'bg-blue-400', width: '75%', textColor: 'text-blue-600' };
-    return { label: 'Sangat Kuat', color: 'bg-green-500', width: '100%', textColor: 'text-green-600' };
+    if (score <= 1) return { label: tx.weak,      color: 'bg-red-400',    width: '25%',  textColor: 'text-red-600' };
+    if (score === 2) return { label: tx.fair,      color: 'bg-yellow-400', width: '50%',  textColor: 'text-yellow-600' };
+    if (score === 3) return { label: tx.strong,    color: 'bg-blue-400',   width: '75%',  textColor: 'text-blue-600' };
+    return            { label: tx.veryStrong,      color: 'bg-green-500',  width: '100%', textColor: 'text-green-600' };
 }
 
 function isValidEmail(email) {
@@ -27,6 +29,8 @@ export default function Login() {
     const { login, signup } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const { lang } = useLanguage();
+    const tx = t[lang];
 
     const from = location.state?.from?.pathname || "/";
     const searchParams = new URLSearchParams(location.search);
@@ -57,16 +61,16 @@ export default function Login() {
         if (verifiedParam === '1') {
             Swal.fire({
                 icon: 'success',
-                title: 'Email Terverifikasi!',
-                text: 'Akun Anda sudah aktif. Silakan login.',
+                title: tx.verifiedTitle,
+                text: tx.verifiedText,
                 timer: 3000,
                 showConfirmButton: false,
             });
         } else if (verifiedParam === 'already') {
             Swal.fire({
                 icon: 'info',
-                title: 'Sudah Terverifikasi',
-                text: 'Email Anda sudah diverifikasi sebelumnya. Silakan login.',
+                title: tx.alreadyVerifiedTitle,
+                text: tx.alreadyVerifiedText,
                 timer: 2500,
                 showConfirmButton: false,
             });
@@ -94,8 +98,8 @@ export default function Login() {
         return () => clearTimeout(debounceRef.current);
     }, [referralCode]);
 
-    const passwordStrength = useMemo(() => !isLogin ? getPasswordStrength(password) : null, [password, isLogin]);
-    const emailError = emailTouched && email && !isValidEmail(email) ? 'Format email tidak valid' : null;
+    const passwordStrength = useMemo(() => !isLogin ? getPasswordStrength(password, tx) : null, [password, isLogin, tx]);
+    const emailError = emailTouched && email && !isValidEmail(email) ? tx.emailError : null;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -106,8 +110,8 @@ export default function Login() {
                 await login(email, password);
                 Swal.fire({
                     icon: 'success',
-                    title: 'Login Berhasil',
-                    text: 'Selamat datang kembali!',
+                    title: tx.loginSuccessTitle,
+                    text: tx.loginSuccessText,
                     timer: 1500,
                     showConfirmButton: false
                 });
@@ -149,10 +153,10 @@ export default function Login() {
                 {/* Header */}
                 <div className="bg-primary text-white p-8 text-center">
                     <h2 className="text-3xl font-bold mb-2">
-                        {isLogin ? 'Selamat Datang' : 'Buat Akun Baru'}
+                        {isLogin ? tx.loginTitle : tx.registerTitle}
                     </h2>
                     <p className="text-emerald-100/80 text-sm">
-                        {isLogin ? 'Silakan masuk ke akun kamu untuk melanjutkan' : 'Daftar sekarang untuk mulai berbelanja'}
+                        {isLogin ? tx.loginSubtitle : tx.registerSubtitle}
                     </p>
                 </div>
 
@@ -163,7 +167,7 @@ export default function Login() {
                             <>
                                 {/* Nama Lengkap */}
                                 <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Nama Lengkap</label>
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">{tx.fullName}</label>
                                     <div className="relative">
                                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                             <User className="h-5 w-5 text-neutral-400" />
@@ -174,7 +178,7 @@ export default function Login() {
                                             onChange={(e) => setName(e.target.value)}
                                             required
                                             className="pl-10 w-full rounded-xl border-neutral-300 bg-neutral-50 p-3 text-base focus:ring-primary focus:border-primary border transition"
-                                            placeholder="John Doe"
+                                            placeholder={tx.namePlaceholder}
                                         />
                                     </div>
                                 </div>
@@ -182,7 +186,7 @@ export default function Login() {
                                 {/* No. HP */}
                                 <div>
                                     <label className="block text-sm font-medium text-neutral-700 mb-1">
-                                        No. HP <span className="text-neutral-400 font-normal">(opsional)</span>
+                                        {tx.phone} <span className="text-neutral-400 font-normal">{tx.phoneOptional}</span>
                                     </label>
                                     <div className="relative">
                                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -193,7 +197,7 @@ export default function Login() {
                                             value={phone}
                                             onChange={(e) => setPhone(e.target.value)}
                                             className="pl-10 w-full rounded-xl border-neutral-300 bg-neutral-50 p-3 text-base focus:ring-primary/20 focus:border-primary border transition focus:outline-none focus:ring-2"
-                                            placeholder="08xxxxxxxxxx"
+                                            placeholder={tx.phonePlaceholder}
                                         />
                                     </div>
                                 </div>
@@ -201,7 +205,7 @@ export default function Login() {
                         )}
 
                         <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Email</label>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">{tx.email}</label>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <AtSign className={`h-5 w-5 ${emailError ? 'text-red-400' : 'text-neutral-400'}`} />
@@ -217,7 +221,7 @@ export default function Login() {
                                             ? 'border-red-300 focus:ring-red-200 focus:border-red-400'
                                             : 'border-neutral-300 focus:ring-primary/20 focus:border-primary'
                                     }`}
-                                    placeholder="kamu@email.com"
+                                    placeholder={tx.emailPlaceholder}
                                 />
                                 {emailTouched && email && (
                                     <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -231,7 +235,7 @@ export default function Login() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Password</label>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">{tx.password}</label>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <Lock className="h-5 w-5 text-neutral-400" />
@@ -249,7 +253,7 @@ export default function Login() {
                                     type="button"
                                     onClick={() => setShowPassword(v => !v)}
                                     className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-400 hover:text-neutral-600 transition"
-                                    aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                                    aria-label={showPassword ? (lang === 'id' ? 'Sembunyikan password' : 'Hide password') : (lang === 'id' ? 'Tampilkan password' : 'Show password')}
                                 >
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
@@ -264,7 +268,7 @@ export default function Login() {
                                         />
                                     </div>
                                     <p className={`text-xs mt-1 font-medium ${passwordStrength.textColor}`}>
-                                        Kekuatan password: {passwordStrength.label}
+                                        {tx.passwordStrength} {passwordStrength.label}
                                     </p>
                                 </div>
                             )}
@@ -275,12 +279,12 @@ export default function Login() {
                                 {/* Alamat Pengiriman */}
                                 <div className="pt-1">
                                     <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-3">
-                                        Alamat Pengiriman <span className="text-neutral-400 font-normal normal-case">(opsional)</span>
+                                        {tx.addressSection} <span className="text-neutral-400 font-normal normal-case">{tx.addressOptional}</span>
                                     </p>
 
                                     <div className="space-y-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-neutral-700 mb-1">Alamat Lengkap</label>
+                                            <label className="block text-sm font-medium text-neutral-700 mb-1">{tx.addressFull}</label>
                                             <div className="relative">
                                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                                     <MapPin className="h-5 w-5 text-neutral-400" />
@@ -290,14 +294,14 @@ export default function Login() {
                                                     value={address}
                                                     onChange={(e) => setAddress(e.target.value)}
                                                     className="pl-10 w-full rounded-xl border-neutral-300 bg-neutral-50 p-3 text-base focus:ring-primary/20 focus:border-primary border transition focus:outline-none focus:ring-2"
-                                                    placeholder="Jl. Contoh No. 123"
+                                                    placeholder={tx.addressPlaceholder}
                                                 />
                                             </div>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-3">
                                             <div>
-                                                <label className="block text-sm font-medium text-neutral-700 mb-1">Kota</label>
+                                                <label className="block text-sm font-medium text-neutral-700 mb-1">{tx.city}</label>
                                                 <div className="relative">
                                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                                         <Building2 className="h-4 w-4 text-neutral-400" />
@@ -307,12 +311,12 @@ export default function Login() {
                                                         value={city}
                                                         onChange={(e) => setCity(e.target.value)}
                                                         className="pl-9 w-full rounded-xl border-neutral-300 bg-neutral-50 p-3 text-base focus:ring-primary/20 focus:border-primary border transition focus:outline-none focus:ring-2"
-                                                        placeholder="Jakarta"
+                                                        placeholder={tx.cityPlaceholder}
                                                     />
                                                 </div>
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-neutral-700 mb-1">Kode Pos</label>
+                                                <label className="block text-sm font-medium text-neutral-700 mb-1">{tx.postalCode}</label>
                                                 <div className="relative">
                                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                                         <Hash className="h-4 w-4 text-neutral-400" />
@@ -323,7 +327,7 @@ export default function Login() {
                                                         onChange={(e) => setPostalCode(e.target.value)}
                                                         maxLength={10}
                                                         className="pl-9 w-full rounded-xl border-neutral-300 bg-neutral-50 p-3 text-base focus:ring-primary/20 focus:border-primary border transition focus:outline-none focus:ring-2"
-                                                        placeholder="12345"
+                                                        placeholder={tx.postalPlaceholder}
                                                     />
                                                 </div>
                                             </div>
@@ -334,7 +338,7 @@ export default function Login() {
                                 {/* Kode Referral */}
                                 <div>
                                     <label className="block text-sm font-medium text-neutral-700 mb-1">
-                                        Kode Referral <span className="text-neutral-400 font-normal">(opsional)</span>
+                                        {tx.referral} <span className="text-neutral-400 font-normal">{tx.referralOptional}</span>
                                     </label>
                                     <div className="relative">
                                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -345,30 +349,30 @@ export default function Login() {
                                             value={referralCode}
                                             onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
                                             className="pl-10 w-full rounded-xl border-neutral-300 bg-neutral-50 p-3 text-base focus:ring-primary/20 focus:border-primary border transition focus:outline-none focus:ring-2 uppercase tracking-widest"
-                                            placeholder="Contoh: ABCD1234"
+                                            placeholder={tx.referralPlaceholder}
                                             maxLength={8}
                                         />
                                     </div>
                                     {referralStatus === 'loading' && (
                                         <p className="text-xs text-neutral-400 mt-1 flex items-center gap-1">
                                             <span className="inline-block w-3 h-3 border-2 border-neutral-300 border-t-primary rounded-full animate-spin" />
-                                            Memeriksa kode...
+                                            {tx.referralChecking}
                                         </p>
                                     )}
                                     {referralStatus === 'valid' && (
                                         <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
                                             <CheckCircle className="w-3.5 h-3.5" />
-                                            Referral dari <span className="font-semibold">{referralOwner}</span>
+                                            {tx.referralValid} <span className="font-semibold">{referralOwner}</span>
                                         </p>
                                     )}
                                     {referralStatus === 'invalid' && (
                                         <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
                                             <XCircle className="w-3.5 h-3.5" />
-                                            Kode referral tidak ditemukan
+                                            {tx.referralInvalid}
                                         </p>
                                     )}
                                     {!referralStatus && (
-                                        <p className="text-xs text-neutral-400 mt-1">Kosongkan jika tidak punya kode referral</p>
+                                        <p className="text-xs text-neutral-400 mt-1">{tx.referralHint}</p>
                                     )}
                                 </div>
                             </>
@@ -380,16 +384,16 @@ export default function Login() {
                             className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white p-3 rounded-xl font-medium transition-all transform hover:-translate-y-0.5"
                         >
                             {loading ? (
-                                <span className="animate-pulse">Memproses...</span>
+                                <span className="animate-pulse">{tx.processing}</span>
                             ) : isLogin ? (
                                 <>
                                     <LogIn size={20} />
-                                    Masuk Sekarang
+                                    {tx.loginBtn}
                                 </>
                             ) : (
                                 <>
                                     <UserPlus size={20} />
-                                    Daftar Sekarang
+                                    {tx.registerBtn}
                                 </>
                             )}
                         </button>
@@ -397,26 +401,26 @@ export default function Login() {
 
                     {/* Toggle Section */}
                     <div className="mt-6 text-center text-sm text-neutral-600">
-                        {isLogin ? "Belum punya akun?" : "Sudah punya akun?"}{' '}
+                        {isLogin ? tx.noAccount : tx.hasAccount}{' '}
                         <button
                             type="button"
                             onClick={() => setIsLogin(!isLogin)}
                             className="font-semibold text-primary hover:underline"
                         >
-                            {isLogin ? 'Daftar di sini' : 'Masuk di sini'}
+                            {isLogin ? tx.registerHere : tx.loginHere}
                         </button>
                     </div>
 
                     {/* Starcenter CTA */}
                     {!isLogin && (
                         <div className="mt-4 p-3 rounded-xl bg-neutral-50 border border-neutral-200 text-center text-sm text-neutral-600">
-                            Ingin bergabung sebagai mitra?{' '}
+                            {tx.partnerCta}{' '}
                             <button
                                 type="button"
                                 onClick={() => navigate('/daftar-center')}
                                 className="font-semibold text-primary hover:underline"
                             >
-                                Daftar sebagai Center
+                                {tx.registerCenter}
                             </button>
                         </div>
                     )}
@@ -429,7 +433,7 @@ export default function Login() {
                                 onClick={() => navigate('/forgot-password')}
                                 className="text-primary hover:underline font-medium"
                             >
-                                Lupa Password?
+                                {tx.forgotPassword}
                             </button>
                         </div>
                     )}
