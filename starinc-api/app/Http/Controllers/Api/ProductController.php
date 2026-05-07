@@ -182,6 +182,24 @@ class ProductController extends Controller
         ]);
     }
 
+    /** Reorder media items for a product (admin). */
+    public function reorderMedia(Request $request, int $id)
+    {
+        $validated = $request->validate([
+            'order'              => 'required|array',
+            'order.*.id'         => 'required|integer',
+            'order.*.sort_order' => 'required|integer',
+        ]);
+
+        $product = Product::findOrFail($id);
+
+        foreach ($validated['order'] as $item) {
+            $product->media()->where('id', $item['id'])->update(['sort_order' => $item['sort_order']]);
+        }
+
+        return response()->json(['message' => 'Media reordered.']);
+    }
+
     /** Delete a single media item from a product (admin). */
     public function deleteMedia(int $productId, int $mediaId)
     {

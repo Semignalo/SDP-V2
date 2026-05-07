@@ -34,6 +34,11 @@ export const adminProductApi = {
         return response.data;
     },
 
+    reorderMedia: async (productId, order) => {
+        const response = await apiClient.put(`/admin/products/${productId}/media/reorder`, { order });
+        return response.data;
+    },
+
     uploadMedia: async (id, files) => {
         const formData = new FormData();
         files.forEach(file => formData.append('files[]', file));

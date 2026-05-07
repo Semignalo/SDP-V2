@@ -37,6 +37,7 @@ export default function Products() {
     const [filesToUpload, setFilesToUpload] = useState([]);
     const [mediaObjects, setMediaObjects] = useState([]); // full media objects with IDs
     const [deletedMediaIds, setDeletedMediaIds] = useState([]);
+    const [mainImageFilePath, setMainImageFilePath] = useState(null);
     const [formData, setFormData] = useState(EMPTY_FORM);
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
@@ -86,6 +87,7 @@ export default function Products() {
         setFilesToUpload([]);
         setMediaObjects([]);
         setDeletedMediaIds([]);
+        setMainImageFilePath(null);
         setIsModalOpen(true);
     };
 
@@ -122,23 +124,27 @@ export default function Products() {
         });
         setMediaObjects(product.media || []);
         setDeletedMediaIds([]);
+        setMainImageFilePath(null);
         setFilesToUpload([]);
         setIsModalOpen(true);
     };
 
     const handleMediaChange = (newMedia, newMainImage) => {
-        // Detect removed media by comparing URLs with mediaObjects
+        // Detect removed existing media
         const removedIds = mediaObjects
-            .filter(obj => {
-                const objUrl = obj.url || (obj.file_path ? `${import.meta.env.VITE_STORAGE_URL || ''}/storage/${obj.file_path}` : null);
-                return objUrl && !newMedia.includes(objUrl);
-            })
+            .filter(obj => obj.url && !newMedia.includes(obj.url))
             .map(obj => obj.id)
             .filter(id => id && !deletedMediaIds.includes(id));
-
         if (removedIds.length > 0) {
             setDeletedMediaIds(prev => [...prev, ...removedIds]);
         }
+
+        // Resolve main image file_path immediately (avoids URL mismatch at submit time)
+        const mainObj = mediaObjects.find(obj => obj.url === newMainImage);
+        if (mainObj?.file_path) {
+            setMainImageFilePath(mainObj.file_path);
+        }
+
         setFormData(prev => ({ ...prev, media: newMedia, image: newMainImage }));
     };
 
@@ -195,13 +201,8 @@ export default function Products() {
                 }))
             };
 
-            // Resolve main_image path from URL
-            const mainImageObj = mediaObjects.find(obj => {
-                const objUrl = obj.url || (obj.file_path ? `${import.meta.env.VITE_STORAGE_URL || ''}/storage/${obj.file_path}` : null);
-                return objUrl === formData.image;
-            });
-            if (mainImageObj?.file_path) {
-                apiData.main_image = mainImageObj.file_path;
+            if (mainImageFilePath) {
+                apiData.main_image = mainImageFilePath;
             }
 
             let savedProduct;
@@ -218,6 +219,18 @@ export default function Products() {
                 await adminProductApi.deleteMedia(productId, mediaId);
             }
             setDeletedMediaIds([]);
+
+            // Sync media sort order (reorder)
+            const existingUrls = formData.media.filter(url => !url.startsWith('blob:'));
+            const reorderPayload = existingUrls
+                .map((url, idx) => {
+                    const obj = mediaObjects.find(o => o.url === url);
+                    return obj ? { id: obj.id, sort_order: idx } : null;
+                })
+                .filter(Boolean);
+            if (reorderPayload.length > 1 && productId) {
+                await adminProductApi.reorderMedia(productId, reorderPayload);
+            }
 
             if (filesToUpload.length > 0 && productId) {
                 setUploadProgress(50);
