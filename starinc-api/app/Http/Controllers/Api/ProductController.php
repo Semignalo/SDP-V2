@@ -182,6 +182,24 @@ class ProductController extends Controller
         ]);
     }
 
+    /** Delete a single media item from a product (admin). */
+    public function deleteMedia(int $productId, int $mediaId)
+    {
+        $product = Product::findOrFail($productId);
+        $media   = $product->media()->findOrFail($mediaId);
+
+        Storage::disk('public')->delete($media->file_path);
+
+        if ($product->main_image === $media->file_path) {
+            $next = $product->media()->where('id', '!=', $mediaId)->first();
+            $product->update(['main_image' => $next?->file_path]);
+        }
+
+        $media->delete();
+
+        return response()->json(['message' => 'Media berhasil dihapus.']);
+    }
+
     /** Stream PDF brochure with CORS headers (public). */
     public function streamPdf(int $id)
     {

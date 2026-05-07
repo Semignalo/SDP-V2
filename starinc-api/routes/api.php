@@ -134,6 +134,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/products/{id}', [ProductController::class, 'update']);
         Route::delete('/products/{id}', [ProductController::class, 'destroy']);
         Route::post('/products/{id}/media', [ProductController::class, 'uploadMedia']);
+        Route::delete('/products/{id}/media/{mediaId}', [ProductController::class, 'deleteMedia']);
         Route::post('/products/{id}/pdf', [ProductController::class, 'uploadPdf']);
         Route::delete('/products/{id}/pdf', [ProductController::class, 'removePdf']);
 

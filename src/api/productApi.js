@@ -29,6 +29,11 @@ export const adminProductApi = {
         return response.data;
     },
 
+    deleteMedia: async (productId, mediaId) => {
+        const response = await apiClient.delete(`/admin/products/${productId}/media/${mediaId}`);
+        return response.data;
+    },
+
     uploadMedia: async (id, files) => {
         const formData = new FormData();
         files.forEach(file => formData.append('files[]', file));
