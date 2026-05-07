@@ -629,7 +629,7 @@ export default function Orders() {
                                     {selectedOrder.items?.map((item, idx) => (
                                         <div key={idx} className="flex gap-4 items-center border border-gray-100 rounded-lg p-3 bg-white">
                                             <div className="w-16 h-16 bg-gray-100 rounded border border-gray-200 overflow-hidden flex-shrink-0">
-                                                <img src={item.product?.main_image || item.image || '/logo.png'} alt={item.product?.title || item.title} className="w-full h-full object-cover" />
+                                                <img src={item.product?.main_image_url || item.product?.main_image || item.image || '/logo.png'} alt={item.product?.title || item.title} className="w-full h-full object-cover" />
                                             </div>
                                             <div className="flex-1">
                                                 <h4 className="text-sm font-bold text-gray-900">{item.product?.title || item.title}</h4>
