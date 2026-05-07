@@ -98,6 +98,7 @@ class ProductController extends Controller
             'is_promo'       => 'boolean',
             'sort_order'     => 'integer',
             'stock'          => 'nullable|integer|min:0',
+            'main_image'     => 'nullable|string',
             'variants'         => 'nullable|array',
             'variants.*.name'  => 'required_with:variants|string|max:100',
             'variants.*.price' => 'required_with:variants|numeric|min:0',
